@@ -383,6 +383,61 @@ def discover_cluster_phase_manifest_command(
     console.print(f"[green]Discovered {len(manifest)} cluster patient-phase rows into {output_csv}.[/green]")
 
 
+@app.command("scan-cluster-complete-cases")
+def scan_cluster_complete_cases_command(
+    framework_root: Path = typer.Option(
+        Path("."),
+        exists=True,
+        file_okay=False,
+        readable=True,
+        help="Framework repo root on the cluster.",
+    ),
+    output_dir: Path = typer.Option(..., help="Directory for discovered and filtered manifests."),
+    data_root: Path | None = typer.Option(
+        None,
+        help="Optional explicit data root. Defaults to ../data relative to framework_root.",
+    ),
+    phases: str = typer.Option("venous,arterial", help="Comma-separated phases to scan."),
+    required_structures: str = typer.Option(
+        "tumor,pancreas,duct,cbd,artery,vein",
+        help="Comma-separated structures required for a case to be marked complete.",
+    ),
+    structure_patterns_json: str | None = typer.Option(
+        None,
+        help="Optional JSON map from structure name to filename keywords.",
+    ),
+) -> None:
+    from radiogenpdac.ingestion import (
+        DEFAULT_STRUCTURE_PATTERNS,
+        scan_cluster_complete_cases,
+    )
+
+    if structure_patterns_json:
+        import json
+
+        parsed = json.loads(structure_patterns_json)
+        structure_patterns = {str(key): [str(item) for item in value] for key, value in parsed.items()}
+    else:
+        structure_patterns = DEFAULT_STRUCTURE_PATTERNS
+
+    outputs = scan_cluster_complete_cases(
+        framework_root=framework_root,
+        output_dir=output_dir,
+        data_root=data_root,
+        phases=[item.strip() for item in phases.split(",") if item.strip()],
+        structure_patterns=structure_patterns,
+        required_structures=[item.strip() for item in required_structures.split(",") if item.strip()],
+    )
+    venous_path = outputs.get("venous")
+    arterial_path = outputs.get("arterial")
+    console.print(
+        "[green]Cluster scan complete.[/green] "
+        f"Inventory: {outputs['inventory']} "
+        f"Venous manifest: {venous_path} "
+        f"Arterial manifest: {arterial_path}"
+    )
+
+
 @app.command("build-cohort-from-phases")
 def build_cohort_from_phases_command(
     phase_manifest: Path = typer.Option(..., exists=True, readable=True),

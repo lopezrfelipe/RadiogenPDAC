@@ -273,6 +273,32 @@ radiogenpdac discover-cluster-phase-manifest \
 
 That command assumes `../data` relative to the repo root. It does not copy any data into the repository; it just writes a CSV of absolute paths.
 
+If you want the framework to scan the folders and keep only complete multiclass cases automatically, use:
+
+```bash
+radiogenpdac scan-cluster-complete-cases \
+  --framework-root . \
+  --output-dir artifacts/ingestion/complete_cases
+```
+
+That writes:
+
+- `artifacts/ingestion/complete_cases/cluster_phase_manifest.csv`
+- `artifacts/ingestion/complete_cases/cluster_case_inventory.csv`
+- `artifacts/ingestion/complete_cases/venous_training_manifest.csv`
+- `artifacts/ingestion/complete_cases/arterial_training_manifest.csv`
+
+By default, a case is considered complete only if all of these are present in the segmentation folder for that phase:
+
+- `tumor`
+- `pancreas`
+- `duct`
+- `cbd`
+- `artery`
+- `vein`
+
+You can override that with `--required-structures` if needed.
+
 Start with a long CSV like [templates/phase_ingestion_manifest.example.csv](/Users/felipe/Documents/Playground/RadiogenPDAC/templates/phase_ingestion_manifest.example.csv):
 
 - one row per patient-phase,
@@ -296,6 +322,11 @@ radiogenpdac build-cohort-from-phases \
 ```
 
 If your filenames use different keywords, pass `--structure-patterns-json` with a structure-to-keywords map.
+
+For your current workflow, the easiest starting point is usually:
+
+1. `scan-cluster-complete-cases`
+2. use `venous_training_manifest.csv` or `arterial_training_manifest.csv` directly for phase-specific fine-tuning prep
 
 ### 1. Prepare nnU-Net fine-tuning datasets
 

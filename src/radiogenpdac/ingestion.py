@@ -98,6 +98,71 @@ def build_phase_ingestion_manifest(
     return result
 
 
+def scan_cluster_complete_cases(
+    framework_root: str | Path,
+    output_dir: str | Path,
+    data_root: str | Path | None = None,
+    phases: list[str] | None = None,
+    structure_patterns: dict[str, list[str]] | None = None,
+    required_structures: list[str] | None = None,
+) -> dict[str, Path]:
+    phases = phases or ["venous", "arterial"]
+    patterns = structure_patterns or DEFAULT_STRUCTURE_PATTERNS
+    required_structures = required_structures or ["tumor", "pancreas", "duct", "cbd", "artery", "vein"]
+
+    output_root = Path(output_dir).expanduser().resolve()
+    output_root.mkdir(parents=True, exist_ok=True)
+
+    discovered_csv = output_root / "cluster_phase_manifest.csv"
+    discovered = discover_cluster_phase_manifest(
+        framework_root=framework_root,
+        output_csv=discovered_csv,
+        data_root=data_root,
+        phases=phases,
+    )
+
+    rows: list[dict[str, Any]] = []
+    for _, row in discovered.iterrows():
+        record = row.to_dict()
+        segmentation_dir = Path(str(record["segmentation_dir"])).expanduser().resolve()
+        missing_items: list[str] = []
+
+        record["segmentation_dir_exists"] = int(segmentation_dir.exists())
+        for structure, keywords in patterns.items():
+            mask_path = None
+            if segmentation_dir.exists():
+                mask_path = _find_structure_mask(segmentation_dir, keywords)
+            record[f"{structure}_mask"] = mask_path
+
+        if not segmentation_dir.exists():
+            missing_items.append("segmentation_dir")
+        for structure in required_structures:
+            if _is_missing(record.get(f"{structure}_mask")):
+                missing_items.append(structure)
+
+        record["required_structures_json"] = json.dumps(required_structures)
+        record["missing_items_json"] = json.dumps(missing_items)
+        record["is_complete"] = int(len(missing_items) == 0)
+        rows.append(record)
+
+    inventory = pd.DataFrame(rows).sort_values(["phase", "patient_id"]).reset_index(drop=True)
+    inventory_csv = output_root / "cluster_case_inventory.csv"
+    inventory.to_csv(inventory_csv, index=False)
+
+    output_paths: dict[str, Path] = {
+        "discovered": discovered_csv,
+        "inventory": inventory_csv,
+    }
+    for phase in phases:
+        phase_frame = inventory.loc[
+            (inventory["phase"].astype(str).str.lower() == phase.lower()) & (inventory["is_complete"] == 1)
+        ].reset_index(drop=True)
+        phase_csv = output_root / f"{phase.lower()}_training_manifest.csv"
+        phase_frame.to_csv(phase_csv, index=False)
+        output_paths[phase.lower()] = phase_csv
+    return output_paths
+
+
 def discover_cluster_phase_manifest(
     framework_root: str | Path,
     output_csv: str | Path,
