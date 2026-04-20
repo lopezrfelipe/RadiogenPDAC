@@ -638,6 +638,13 @@ cd /path/to/project_root/RadiogenPDAC
 sbatch scripts/slurm/venous_full_fold0_ft.sbatch
 ```
 
+If you also want the matching full-venous baseline eval on fold `0` as a separate SLURM job, use [scripts/slurm/venous_full_fold0_baseline.sbatch](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/venous_full_fold0_baseline.sbatch):
+
+```bash
+cd /path/to/project_root/RadiogenPDAC
+sbatch scripts/slurm/venous_full_fold0_baseline.sbatch
+```
+
 If you want to re-run the prep stage from scratch for the same workflow directory, delete:
 
 - `../data/manifests/workflows/venous_smoke_50/.prep.done`
