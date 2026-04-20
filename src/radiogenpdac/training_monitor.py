@@ -54,6 +54,19 @@ def _load_checkpoint_payload(checkpoint_path: Path | None) -> dict[str, Any] | N
     return checkpoint if isinstance(checkpoint, dict) else None
 
 
+def _to_json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _to_json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_to_json_safe(item) for item in value]
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except (ValueError, TypeError):
+            return str(value)
+    return value
+
+
 def _extract_epoch_rows(logging_payload: dict[str, Any]) -> list[dict[str, Any]]:
     train_losses = list(logging_payload.get("train_losses", []))
     val_losses = list(logging_payload.get("val_losses", []))
@@ -86,7 +99,9 @@ def _extract_epoch_rows(logging_payload: dict[str, Any]) -> list[dict[str, Any]]
             "ema_fg_dice": float(ema_fg_dice[epoch]),
             "learning_rate": float(learning_rates[epoch]),
             "epoch_seconds": epoch_seconds,
-            "dice_per_class_or_region_json": json.dumps(dice_per_class[epoch]) if epoch < len(dice_per_class) else "[]",
+            "dice_per_class_or_region_json": (
+                json.dumps(_to_json_safe(dice_per_class[epoch])) if epoch < len(dice_per_class) else "[]"
+            ),
         }
         rows.append(row)
     return rows
