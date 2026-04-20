@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +53,37 @@ def _normalize_filename(filename: str) -> str:
     return name
 
 
+def _tokenize_case_identifier(value: str) -> list[str]:
+    return [token for token in re.split(r"[^a-z0-9]+", _normalize_filename(value)) if token]
+
+
+def _extract_case_keys(value: str) -> dict[str, Any]:
+    normalized = _normalize_filename(value)
+    tokens = _tokenize_case_identifier(value)
+
+    marker_index = None
+    for marker in ("studydate", "sd"):
+        if marker in tokens:
+            marker_index = tokens.index(marker)
+            break
+
+    patient_tokens = tokens[:marker_index] if marker_index is not None and marker_index > 0 else tokens[:1]
+    date_token = None
+    if marker_index is not None and marker_index + 1 < len(tokens):
+        date_token = tokens[marker_index + 1]
+    if date_token is None:
+        date_token = next((token for token in tokens if token.isdigit() and len(token) >= 6), None)
+
+    phase_token = next((token for token in tokens if "venous" in token or "arterial" in token), None)
+    return {
+        "normalized": normalized,
+        "tokens": tokens,
+        "patient_key": "_".join(patient_tokens),
+        "date_key": date_token,
+        "phase_token": phase_token,
+    }
+
+
 def _should_ignore_discovery_file(path: Path) -> bool:
     name = path.name
     lowered = name.lower()
@@ -65,7 +97,11 @@ def _should_ignore_discovery_file(path: Path) -> bool:
 def _is_volume_file(path: Path) -> bool:
     if _should_ignore_discovery_file(path):
         return False
-    suffixes = "".join(path.suffixes[-2:]) if len(path.suffixes) >= 2 else path.suffix
+    suffixes = (
+        "".join(path.suffixes[-2:]).lower()
+        if len(path.suffixes) >= 2
+        else path.suffix.lower()
+    )
     return suffixes in {".nii.gz", ".nii", ".mha", ".mhd", ".nrrd"}
 
 
@@ -81,6 +117,52 @@ def _find_structure_mask(segmentation_dir: Path, keywords: list[str]) -> str | N
         if any(keyword in normalized for keyword in keyword_set):
             return str(file_path.resolve())
     return None
+
+
+def _resolve_segmentation_dir_for_volume(
+    segmentation_phase_dir: Path,
+    image_path: Path,
+    phase: str,
+) -> Path:
+    default_dir = segmentation_phase_dir / _normalize_filename(image_path.name)
+    if not segmentation_phase_dir.exists():
+        return default_dir
+
+    image_keys = _extract_case_keys(image_path.name)
+    phase_lower = phase.strip().lower()
+    candidates: list[tuple[int, str, Path]] = []
+
+    for candidate_dir in segmentation_phase_dir.iterdir():
+        if not candidate_dir.is_dir() or _should_ignore_discovery_file(candidate_dir):
+            continue
+
+        candidate_keys = _extract_case_keys(candidate_dir.name)
+        score = 0
+
+        if candidate_keys["normalized"] == image_keys["normalized"]:
+            score += 1000
+
+        if image_keys["patient_key"] and candidate_keys["patient_key"] == image_keys["patient_key"]:
+            score += 100
+        elif image_keys["patient_key"]:
+            continue
+
+        if image_keys["date_key"] and candidate_keys["date_key"] == image_keys["date_key"]:
+            score += 50
+        elif image_keys["date_key"] and candidate_keys["date_key"] is not None:
+            continue
+
+        if any(phase_lower in token for token in candidate_keys["tokens"]):
+            score += 10
+
+        if score > 0:
+            candidates.append((score, candidate_keys["normalized"], candidate_dir))
+
+    if candidates:
+        candidates.sort(key=lambda item: (-item[0], item[1]))
+        return candidates[0][2].resolve()
+
+    return default_dir
 
 
 def build_phase_ingestion_manifest(
@@ -210,7 +292,11 @@ def discover_cluster_phase_manifest(
             continue
         for image_path in sorted(path for path in volume_dir.iterdir() if path.is_file() and _is_volume_file(path)):
             patient_id = _normalize_filename(image_path.name)
-            segmentation_dir = segmentation_phase_dir / patient_id
+            segmentation_dir = _resolve_segmentation_dir_for_volume(
+                segmentation_phase_dir=segmentation_phase_dir,
+                image_path=image_path,
+                phase=phase,
+            )
             rows.append(
                 {
                     "patient_id": patient_id,

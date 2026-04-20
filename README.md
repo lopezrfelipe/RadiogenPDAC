@@ -312,6 +312,8 @@ radiogenpdac discover-cluster-phase-manifest \
 
 That command assumes `../data` relative to the repo root. It does not copy any data into the repository; it just writes a CSV of absolute paths.
 
+The cluster scanner resolves segmentation folders case-insensitively. It first tries an exact normalized match, then falls back to matching by patient identifier plus study date, which is helpful for layouts where volumes and segmentation folders use related but different names such as `..._studydate_..._venous...` versus `..._SD_..._FELIXVENOUS..._SEGMENTATIONS`.
+
 If you want the framework to scan the folders and keep only complete multiclass cases automatically, use:
 
 ```bash
