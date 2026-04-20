@@ -215,6 +215,16 @@ def plan_encoder_dataset_command(
         None,
         help="Optional comma-separated spacing in z,y,x order, for example 1.5,0.8,0.8",
     ),
+    source_model_training_output_dir: Path | None = typer.Option(
+        None,
+        exists=True,
+        readable=True,
+        help="Optional pretrained nnU-Net model dir to transfer compatible plans from.",
+    ),
+    source_plans_identifier: str | None = typer.Option(
+        None,
+        help="Optional source plans identifier override. Usually inferred from the source model dir name.",
+    ),
 ) -> None:
     from radiogenpdac.pdac_encoder import plan_and_preprocess_phase_dataset
 
@@ -235,8 +245,39 @@ def plan_encoder_dataset_command(
         num_processes=num_processes,
         verify_integrity=verify_integrity,
         overwrite_target_spacing=spacing,
+        source_model_training_output_dir=source_model_training_output_dir,
+        source_plans_identifier=source_plans_identifier,
     )
     console.print("[green]Finished nnU-Net planning and preprocessing.[/green]")
+
+
+@app.command("initialize-pretrained-plans")
+def initialize_pretrained_plans_command(
+    dataset_id: int = typer.Option(...),
+    pdac_root: Path = typer.Option(Path("PDAC_Detection"), exists=True, file_okay=False, readable=True),
+    nnunet_raw_dir: Path = typer.Option(...),
+    nnunet_preprocessed_dir: Path = typer.Option(...),
+    nnunet_results_dir: Path = typer.Option(...),
+    source_model_training_output_dir: Path = typer.Option(..., exists=True, readable=True),
+    target_plans_identifier: str = typer.Option(...),
+    source_plans_identifier: str | None = typer.Option(
+        None,
+        help="Optional source plans identifier override. Usually inferred from the source model dir name.",
+    ),
+) -> None:
+    from radiogenpdac.pdac_encoder import initialize_pretrained_plans
+
+    target_plans = initialize_pretrained_plans(
+        dataset_id=dataset_id,
+        pdac_root=pdac_root,
+        nnunet_raw_dir=nnunet_raw_dir,
+        nnunet_preprocessed_dir=nnunet_preprocessed_dir,
+        nnunet_results_dir=nnunet_results_dir,
+        source_model_training_output_dir=source_model_training_output_dir,
+        target_plans_identifier=target_plans_identifier,
+        source_plans_identifier=source_plans_identifier,
+    )
+    console.print(f"[green]Initialized compatible pretrained plans at {target_plans}.[/green]")
 
 
 @app.command("finetune-encoder")
@@ -693,6 +734,10 @@ def run_phase_finetune_workflow_command(
     structure_priority: str = typer.Option("pancreas,artery,vein,cyst,tumor"),
     label_map_json: str | None = typer.Option(None),
     checkpoint_name: str = typer.Option("checkpoint_final.pth"),
+    source_plans_identifier: str | None = typer.Option(
+        None,
+        help="Optional source plans identifier override. Usually inferred from original-model-training-output-dir.",
+    ),
 ) -> None:
     from radiogenpdac.ingestion import DEFAULT_LABEL_MAP, run_phase_finetune_workflow
 
@@ -738,6 +783,7 @@ def run_phase_finetune_workflow_command(
         overwrite_target_spacing=spacing,
         checkpoint_name=checkpoint_name,
         fold=fold,
+        source_plans_identifier=source_plans_identifier,
     )
     console.print(
         f"[green]Workflow complete. Baseline Dice={summary['baseline_mean_dice']:.4f}, "

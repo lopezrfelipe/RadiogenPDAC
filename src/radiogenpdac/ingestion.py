@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -827,6 +828,7 @@ def run_phase_finetune_workflow(
     overwrite_target_spacing: list[float] | None = None,
     checkpoint_name: str = "checkpoint_final.pth",
     fold: int = 0,
+    source_plans_identifier: str | None = None,
 ) -> dict[str, Any]:
     from radiogenpdac.pdac_encoder import finetune_phase_encoder, plan_and_preprocess_phase_dataset
 
@@ -856,11 +858,13 @@ def run_phase_finetune_workflow(
         nnunet_preprocessed_dir=nnunet_preprocessed_dir,
         dataset_id=dataset_id,
         dataset_name=dataset_name,
-        output_json=workflow_dir / "splits_final.json",
+        output_json=None,
         split_column=split_column if split_column and split_column in prepared.columns else None,
         n_folds=n_folds,
         seed=seed,
     )
+    workflow_splits_json = workflow_dir / "splits_final.json"
+    shutil.copy2(splits_json, workflow_splits_json)
 
     plan_and_preprocess_phase_dataset(
         dataset_id=dataset_id,
@@ -874,6 +878,8 @@ def run_phase_finetune_workflow(
         num_processes=num_processes,
         verify_integrity=False,
         overwrite_target_spacing=overwrite_target_spacing,
+        source_model_training_output_dir=original_model_training_output_dir,
+        source_plans_identifier=source_plans_identifier,
     )
 
     tumor_label = _read_tumor_label_from_index(prepared_index_csv)
@@ -935,7 +941,8 @@ def run_phase_finetune_workflow(
         "dataset_id": dataset_id,
         "dataset_name": dataset_name,
         "prepared_index_csv": str(prepared_index_csv),
-        "splits_json": str(splits_json),
+        "splits_json": str(workflow_splits_json),
+        "dataset_splits_json": str(splits_json),
         "baseline_metrics_json": str(baseline_dir / "tumor_metrics.json"),
         "baseline_mean_dice": baseline_metrics["mean_dice"],
         "baseline_mean_tumor_gt_coverage": baseline_metrics["mean_tumor_gt_coverage"],
