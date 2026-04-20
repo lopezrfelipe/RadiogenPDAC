@@ -47,7 +47,10 @@ def _load_checkpoint_payload(checkpoint_path: Path | None) -> dict[str, Any] | N
         return None
     import torch
 
-    checkpoint = torch.load(str(checkpoint_path), map_location="cpu")
+    try:
+        checkpoint = torch.load(str(checkpoint_path), map_location="cpu")
+    except (OSError, RuntimeError, EOFError, ValueError):
+        return None
     return checkpoint if isinstance(checkpoint, dict) else None
 
 
@@ -139,6 +142,11 @@ def summarize_training_output(
         active_checkpoint = checkpoint_best
 
     checkpoint_payload = _load_checkpoint_payload(active_checkpoint)
+    if checkpoint_payload is None and active_checkpoint == checkpoint_latest and checkpoint_best.exists():
+        checkpoint_payload = _load_checkpoint_payload(checkpoint_best)
+        if checkpoint_payload is not None:
+            active_checkpoint = checkpoint_best
+    checkpoint_load_ok = checkpoint_payload is not None or active_checkpoint is None
     logging_payload = checkpoint_payload.get("logging", {}) if checkpoint_payload else {}
     epoch_rows = _extract_epoch_rows(logging_payload)
     epoch_frame = pd.DataFrame(epoch_rows)
@@ -156,6 +164,7 @@ def summarize_training_output(
         "fold": fold,
         "active_checkpoint": str(active_checkpoint) if active_checkpoint else None,
         "active_checkpoint_mtime_utc": _safe_mtime_iso(active_checkpoint),
+        "active_checkpoint_load_ok": checkpoint_load_ok,
         "checkpoint_latest_exists": checkpoint_latest.exists(),
         "checkpoint_best_exists": checkpoint_best.exists(),
         "checkpoint_final_exists": checkpoint_final.exists(),
