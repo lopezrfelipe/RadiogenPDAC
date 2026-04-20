@@ -15,3 +15,5 @@ __pycache__/
 data/
 .env.local
 *.local.yaml
+
+PDAC_Detection/workspace/
