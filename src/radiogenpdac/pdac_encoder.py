@@ -242,12 +242,13 @@ def plan_and_preprocess_phase_dataset(
         preprocess_dataset,
     )
 
+    extract_fingerprint_dataset(
+        dataset_id=dataset_id,
+        num_processes=num_processes,
+        check_dataset_integrity=verify_integrity,
+    )
+
     if source_model_training_output_dir is None:
-        extract_fingerprint_dataset(
-            dataset_id=dataset_id,
-            num_processes=num_processes,
-            check_dataset_integrity=verify_integrity,
-        )
         plan_experiment_dataset(
             dataset_id=dataset_id,
             gpu_memory_target_in_gb=gpu_memory_target_gb,
