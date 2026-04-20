@@ -12,21 +12,23 @@ from radiogenpdac.pdac_encoder import _bootstrap_pdac_detection
 
 
 DEFAULT_STRUCTURE_PATTERNS: dict[str, list[str]] = {
-    "tumor": ["tumor", "pdac", "lesion", "mass"],
-    "pancreas": ["pancreas"],
-    "duct": ["duct", "mpd"],
-    "cbd": ["cbd", "common_bile_duct", "bile_duct"],
-    "artery": ["artery", "arterial", "arteries"],
-    "vein": ["vein", "venous", "veins"],
+    "tumor": ["mask_pancreatic_tumor"],
+    "pancreas": ["mask_pancreas"],
+    "duct": ["mask_pancreatic_duct"],
+    "cbd": ["mask_cbd"],
+    "artery": ["mask_celiac_aa", "mask_arteries"],
+    "vein": ["mask_veins"],
+    "cyst": ["mask_pancreatic_cyst"],
 }
 
 DEFAULT_LABEL_MAP: dict[str, int] = {
     "pancreas": 1,
     "tumor": 2,
-    "duct": 3,
-    "cbd": 4,
-    "artery": 5,
-    "vein": 6,
+    "cbd": 3,
+    "artery": 4,
+    "vein": 5,
+    "duct": 6,
+    "cyst": 7,
 }
 
 
@@ -50,13 +52,29 @@ def _normalize_filename(filename: str) -> str:
     return name
 
 
+def _should_ignore_discovery_file(path: Path) -> bool:
+    name = path.name
+    lowered = name.lower()
+    return (
+        name.startswith(".")
+        or name.startswith("._")
+        or lowered == ".ds_store"
+    )
+
+
 def _is_volume_file(path: Path) -> bool:
+    if _should_ignore_discovery_file(path):
+        return False
     suffixes = "".join(path.suffixes[-2:]) if len(path.suffixes) >= 2 else path.suffix
     return suffixes in {".nii.gz", ".nii", ".mha", ".mhd", ".nrrd"}
 
 
 def _find_structure_mask(segmentation_dir: Path, keywords: list[str]) -> str | None:
-    files = sorted(path for path in segmentation_dir.iterdir() if path.is_file())
+    files = sorted(
+        path
+        for path in segmentation_dir.iterdir()
+        if path.is_file() and not _should_ignore_discovery_file(path)
+    )
     keyword_set = [keyword.lower() for keyword in keywords]
     for file_path in files:
         normalized = _normalize_filename(file_path.name)
@@ -108,7 +126,7 @@ def scan_cluster_complete_cases(
 ) -> dict[str, Path]:
     phases = phases or ["venous", "arterial"]
     patterns = structure_patterns or DEFAULT_STRUCTURE_PATTERNS
-    required_structures = required_structures or ["tumor", "pancreas", "duct", "cbd", "artery", "vein"]
+    required_structures = required_structures or ["tumor", "pancreas", "artery", "vein"]
 
     output_root = Path(output_dir).expanduser().resolve()
     output_root.mkdir(parents=True, exist_ok=True)
@@ -399,7 +417,7 @@ def prepare_phase_finetune_dataset_from_ingestion(
         dataset_labels = {"background": 0, "tumor": 1}
         effective_label_map = {"tumor": 1}
     else:
-        structure_priority = structure_priority or ["pancreas", "duct", "cbd", "artery", "vein", "tumor"]
+        structure_priority = structure_priority or ["pancreas", "artery", "vein", "cyst", "tumor"]
         dataset_labels = {"background": 0}
         for structure in structure_priority:
             if structure in label_values:

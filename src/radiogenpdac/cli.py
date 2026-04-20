@@ -399,7 +399,7 @@ def scan_cluster_complete_cases_command(
     ),
     phases: str = typer.Option("venous,arterial", help="Comma-separated phases to scan."),
     required_structures: str = typer.Option(
-        "tumor,pancreas,duct,cbd,artery,vein",
+        "tumor,pancreas,artery,vein",
         help="Comma-separated structures required for a case to be marked complete.",
     ),
     structure_patterns_json: str | None = typer.Option(
@@ -474,7 +474,7 @@ def prepare_ingested_encoder_dataset_command(
         help="Crop margin in mm as x,y,z around the crop structure.",
     ),
     structure_priority: str = typer.Option(
-        "pancreas,duct,cbd,artery,vein,tumor",
+        "pancreas,artery,vein,cyst,tumor",
         help="Comma-separated merge priority for multiclass labels.",
     ),
     label_map_json: str | None = typer.Option(
@@ -636,7 +636,7 @@ def run_phase_finetune_workflow_command(
     gpu_memory_target_gb: float = typer.Option(8.0),
     num_processes: int = typer.Option(4),
     overwrite_target_spacing: str | None = typer.Option(None),
-    structure_priority: str = typer.Option("pancreas,duct,cbd,artery,vein,tumor"),
+    structure_priority: str = typer.Option("pancreas,artery,vein,cyst,tumor"),
     label_map_json: str | None = typer.Option(None),
     checkpoint_name: str = typer.Option("checkpoint_final.pth"),
 ) -> None:

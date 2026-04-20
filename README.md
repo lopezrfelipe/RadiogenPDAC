@@ -237,29 +237,34 @@ project_root/
     └── segmentations/
         ├── venous/
         │   ├── PATIENT_001/
-        │   │   ├── tumor.nii.gz
-        │   │   ├── pancreas.nii.gz
-        │   │   ├── duct.nii.gz
-        │   │   ├── artery.nii.gz
-        │   │   ├── vein.nii.gz
-        │   │   └── cbd.nii.gz
+        │   │   ├── Mask_Pancreatic_Tumor.nii.gz
+        │   │   ├── Mask_Pancreas.nii.gz
+        │   │   ├── Mask_CBD.nii.gz
+        │   │   ├── Mask_Celiac_AA.nii.gz
+        │   │   ├── Mask_Arteries.nii.gz
+        │   │   ├── Mask_Veins.nii.gz
+        │   │   ├── Mask_Pancreatic_Duct.nii.gz
+        │   │   └── Mask_Pancreatic_Cyst.nii.gz
         │   └── ...
         └── arterial/
             ├── PATIENT_001/
-            │   ├── tumor.nii.gz
-            │   ├── pancreas.nii.gz
-            │   ├── duct.nii.gz
-            │   ├── artery.nii.gz
-            │   ├── vein.nii.gz
-            │   └── cbd.nii.gz
+            │   ├── Mask_Pancreatic_Tumor.nii.gz
+            │   ├── Mask_Pancreas.nii.gz
+            │   ├── Mask_CBD.nii.gz
+            │   ├── Mask_Celiac_AA.nii.gz
+            │   ├── Mask_Arteries.nii.gz
+            │   ├── Mask_Veins.nii.gz
+            │   ├── Mask_Pancreatic_Duct.nii.gz
+            │   └── Mask_Pancreatic_Cyst.nii.gz
             └── ...
 ```
 
 Important:
 
 - the `data/` directory is a sibling of the framework repo, not inside it,
+- manifests and inventories should also live under `data/`, not under the repo,
 - none of the commands below require committing any data into Git,
-- the repo should only ever contain code, configs, templates, and generated manifests under `artifacts/`.
+- the repo should only ever contain code, configs, templates, and optional local run artifacts.
 
 ### 0. Build an ingestion manifest from your per-phase volumes and segmentation folders
 
@@ -268,7 +273,7 @@ If your cluster already follows the sibling layout above, you can discover the p
 ```bash
 radiogenpdac discover-cluster-phase-manifest \
   --framework-root . \
-  --output-csv artifacts/ingestion/phases.cluster.csv
+  --output-csv ../data/manifests/phases.cluster.csv
 ```
 
 That command assumes `../data` relative to the repo root. It does not copy any data into the repository; it just writes a CSV of absolute paths.
@@ -278,24 +283,37 @@ If you want the framework to scan the folders and keep only complete multiclass 
 ```bash
 radiogenpdac scan-cluster-complete-cases \
   --framework-root . \
-  --output-dir artifacts/ingestion/complete_cases
+  --output-dir ../data/manifests/complete_cases
 ```
 
 That writes:
 
-- `artifacts/ingestion/complete_cases/cluster_phase_manifest.csv`
-- `artifacts/ingestion/complete_cases/cluster_case_inventory.csv`
-- `artifacts/ingestion/complete_cases/venous_training_manifest.csv`
-- `artifacts/ingestion/complete_cases/arterial_training_manifest.csv`
+- `../data/manifests/complete_cases/cluster_phase_manifest.csv`
+- `../data/manifests/complete_cases/cluster_case_inventory.csv`
+- `../data/manifests/complete_cases/venous_training_manifest.csv`
+- `../data/manifests/complete_cases/arterial_training_manifest.csv`
 
 By default, a case is considered complete only if all of these are present in the segmentation folder for that phase:
 
 - `tumor`
 - `pancreas`
-- `duct`
-- `cbd`
 - `artery`
 - `vein`
+
+The default filename patterns now expect:
+
+- `Mask_Pancreatic_Tumor.nii.gz`
+- `Mask_Pancreas.nii.gz`
+- `Mask_Celiac_AA.nii.gz` or `Mask_Arteries.nii.gz`
+- `Mask_Veins.nii.gz`
+
+Optional structures the scanner can also pick up are:
+
+- `Mask_CBD.nii.gz`
+- `Mask_Pancreatic_Duct.nii.gz`
+- `Mask_Pancreatic_Cyst.nii.gz`
+
+Neither one is required for a case to count as complete by default.
 
 You can override that with `--required-structures` if needed.
 
@@ -303,22 +321,22 @@ Start with a long CSV like [templates/phase_ingestion_manifest.example.csv](/Use
 
 - one row per patient-phase,
 - `image_path` pointing to the phase NIfTI,
-- `segmentation_dir` containing separate mask files such as `tumor.nii.gz`, `pancreas.nii.gz`, `duct.nii.gz`, `artery.nii.gz`, `vein.nii.gz`, and `cbd.nii.gz`.
+- `segmentation_dir` containing separate mask files such as `Mask_Pancreatic_Tumor.nii.gz`, `Mask_Pancreas.nii.gz`, `Mask_CBD.nii.gz`, `Mask_Celiac_AA.nii.gz` or `Mask_Arteries.nii.gz`, and `Mask_Veins.nii.gz`, with optional `Mask_Pancreatic_Duct.nii.gz` and `Mask_Pancreatic_Cyst.nii.gz`.
 
 Resolve those folders into explicit mask columns:
 
 ```bash
 radiogenpdac build-phase-ingestion \
-  --input-csv artifacts/ingestion/phases.cluster.csv \
-  --output-csv artifacts/ingestion/phases.resolved.csv
+  --input-csv ../data/manifests/phases.cluster.csv \
+  --output-csv ../data/manifests/phases.resolved.csv
 ```
 
 Then build the wide cohort manifest used by the radiogenomics pipeline:
 
 ```bash
 radiogenpdac build-cohort-from-phases \
-  --phase-manifest artifacts/ingestion/phases.resolved.csv \
-  --output-csv artifacts/ingestion/cohort.csv
+  --phase-manifest ../data/manifests/phases.resolved.csv \
+  --output-csv ../data/manifests/cohort.csv
 ```
 
 If your filenames use different keywords, pass `--structure-patterns-json` with a structure-to-keywords map.
@@ -328,9 +346,20 @@ For your current workflow, the easiest starting point is usually:
 1. `scan-cluster-complete-cases`
 2. use `venous_training_manifest.csv` or `arterial_training_manifest.csv` directly for phase-specific fine-tuning prep
 
+Important distinction:
+
+- the manifests stay in `../data/manifests/...` and only reference the original volumes and segmentation folders,
+- the original cases are not copied into the framework repo,
+- but nnU-Net fine-tuning still requires a prepared training dataset under `nnUNet_raw`, because nnU-Net expects its own dataset layout.
+
+So:
+
+- case discovery and complete-case tracking stay in `data/`,
+- nnU-Net training inputs get materialized under `nnUNet_raw/` when you run dataset preparation.
+
 ### 1. Prepare nnU-Net fine-tuning datasets
 
-Multiclass fine-tuning is now the recommended default for both venous and arterial phase adaptation because it preserves pancreas, duct, and vascular context while the tumor remains the main downstream ROI.
+Multiclass fine-tuning is now the recommended default for both venous and arterial phase adaptation because it preserves pancreas and vascular context while the tumor remains the main downstream ROI. Cyst can be included as an optional confusion-avoidance class when annotated, while CBD and duct are both discoverable but not included in the default training classes because they may be incompletely annotated.
 
 To account for the crop-first design of the original detector, the ingestion prep now crops each fine-tuning case around the pancreas ROI by default:
 
@@ -344,11 +373,11 @@ If you want the shortest path, you can now run the whole phase workflow in one c
 
 ```bash
 radiogenpdac run-phase-finetune-workflow \
-  --phase-manifest artifacts/ingestion/phases.resolved.csv \
+  --phase-manifest ../data/manifests/phases.resolved.csv \
   --phase arterial \
   --dataset-id 202 \
   --dataset-name PDACArterialMulticlassFinetune \
-  --workflow-root artifacts/workflows/arterial_multiclass \
+  --workflow-root ../data/manifests/workflows/arterial_multiclass \
   --pdac-root PDAC_Detection \
   --nnunet-raw-dir /path/to/nnUNet_raw \
   --nnunet-preprocessed-dir /path/to/nnUNet_preprocessed \
@@ -370,13 +399,13 @@ That command will:
 
 ```bash
 radiogenpdac prepare-ingested-encoder-dataset \
-  --phase-manifest artifacts/ingestion/phases.resolved.csv \
+  --phase-manifest ../data/manifests/phases.resolved.csv \
   --phase venous \
   --dataset-id 201 \
   --dataset-name PDACVenousMulticlassFinetune \
   --pdac-root PDAC_Detection \
   --nnunet-raw-dir /path/to/nnUNet_raw \
-  --output-index artifacts/encoder/venous_multiclass_index.csv \
+  --output-index ../data/manifests/venous_multiclass_index.csv \
   --crop-mode pancreas_roi
 ```
 
@@ -384,38 +413,39 @@ Arterial:
 
 ```bash
 radiogenpdac prepare-ingested-encoder-dataset \
-  --phase-manifest artifacts/ingestion/phases.resolved.csv \
+  --phase-manifest ../data/manifests/phases.resolved.csv \
   --phase arterial \
   --dataset-id 202 \
   --dataset-name PDACArterialMulticlassFinetune \
   --pdac-root PDAC_Detection \
   --nnunet-raw-dir /path/to/nnUNet_raw \
-  --output-index artifacts/encoder/arterial_multiclass_index.csv \
+  --output-index ../data/manifests/arterial_multiclass_index.csv \
   --crop-mode pancreas_roi
 ```
 
 The default class priority is:
 
 - `pancreas`
-- `duct`
-- `cbd`
 - `artery`
 - `vein`
+- `cyst`
 - `tumor`
 
 with tumor written last so it wins on overlaps.
+
+`duct` and `cbd` are intentionally not part of the default class priority because partial or visibility-dependent annotations are easy to misinterpret as background during fine-tuning. If you later curate consistently labeled subsets, you can opt them in explicitly with `--structure-priority pancreas,cbd,artery,vein,duct,cyst,tumor`.
 
 If you explicitly want a tumor-only comparison arm, override the default:
 
 ```bash
 radiogenpdac prepare-ingested-encoder-dataset \
-  --phase-manifest artifacts/ingestion/phases.resolved.csv \
+  --phase-manifest ../data/manifests/phases.resolved.csv \
   --phase venous \
   --dataset-id 211 \
   --dataset-name PDACVenousTumorOnlyFinetune \
   --pdac-root PDAC_Detection \
   --nnunet-raw-dir /path/to/nnUNet_raw \
-  --output-index artifacts/encoder/venous_tumor_only_index.csv \
+  --output-index ../data/manifests/venous_tumor_only_index.csv \
   --task-mode tumor_only
 ```
 
@@ -455,7 +485,7 @@ If your ingestion CSV already has a `split` column with `train` and `val`, prese
 
 ```bash
 radiogenpdac write-encoder-splits \
-  --prepared-index artifacts/encoder/venous_multiclass_index.csv \
+  --prepared-index ../data/manifests/venous_multiclass_index.csv \
   --nnunet-preprocessed-dir /path/to/nnUNet_preprocessed \
   --dataset-id 201 \
   --dataset-name PDACVenousMulticlassFinetune \
@@ -495,7 +525,7 @@ radiogenpdac evaluate-encoder-model \
   --fold 0 \
   --reference-tumor-label 2 \
   --prediction-tumor-label 1 \
-  --output-folder artifacts/encoder/baseline_eval_venous
+  --output-folder ../data/manifests/baseline_eval_venous
 ```
 
 This writes:
@@ -535,7 +565,7 @@ If you prefer to reuse the predictions already written by nnU-Net during final v
 radiogenpdac summarize-validation-tumor-metrics \
   --reference-folder /path/to/nnUNet_preprocessed/Dataset201_PDACVenousMulticlassFinetune/gt_segmentations \
   --prediction-folder /path/to/nnUNet_results/Dataset201_PDACVenousMulticlassFinetune/nnUNetTrainer_ftce__nnUNetPlans__3d_fullres/fold_0/validation \
-  --output-json artifacts/encoder/venous_validation_tumor_metrics.json \
+  --output-json ../data/manifests/venous_validation_tumor_metrics.json \
   --reference-tumor-label 2 \
   --prediction-tumor-label 2
 ```
@@ -623,7 +653,7 @@ That keeps the anatomy context while still letting the downstream radiogenomic m
 No, not always.
 
 - If your immediate goal is a stronger tumor encoder and annotations are sparse, tumor masks alone are enough for a tumor-only fine-tune.
-- If you want the fine-tuned segmentation model to keep outputting pancreas, duct, artery, vein, or CBD reliably, you should fine-tune as a multi-class task with those structures included in the label map.
+- If you want the fine-tuned segmentation model to keep outputting pancreas, artery, vein, or CBD reliably, you should fine-tune as a multi-class task with those structures included in the label map. I would only add CBD or duct to the default training labels once their annotations are consistently present, not merely present when visible.
 
 ## How to reduce forgetting of other structures
 
