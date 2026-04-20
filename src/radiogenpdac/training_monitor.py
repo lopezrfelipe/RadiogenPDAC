@@ -237,7 +237,7 @@ def write_training_monitor_outputs(
     json_path.parent.mkdir(parents=True, exist_ok=True)
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     with json_path.open("w", encoding="utf-8") as handle:
-        json.dump(summary, handle, indent=2)
+        json.dump(_to_json_safe(summary), handle, indent=2)
     epoch_frame.to_csv(csv_path, index=False)
     return summary, json_path, csv_path
 
