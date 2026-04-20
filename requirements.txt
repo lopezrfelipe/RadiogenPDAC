@@ -1,0 +1,27 @@
+# Root environment for the PDAC_Detection fine-tuning and encoder-extraction workflow.
+#
+# Install this first, then install the local package in editable mode:
+#   python -m pip install -r requirements.txt
+#   python -m pip install --no-build-isolation -e .
+#
+# Note:
+# - This environment is designed around the PDAC_Detection / nnU-Net stack.
+# - The later radiogenomic model training stack may be cleaner in a second env
+#   because PDAC_Detection pins older imaging dependencies.
+
+-r PDAC_Detection/requirements.txt
+
+# PDAC_Detection pins older packaging/runtime helpers that break editable installs
+# for this repository and conflict with pydantic.
+setuptools>=68
+typing-extensions>=4.14.1
+
+# Framework CLI/runtime dependencies not pinned by PDAC_Detection.
+pydantic>=2.7
+rich>=13.7
+typer>=0.12
+
+# Useful runtime extras for feature extraction and future training utilities.
+lightning>=2.5
+mlflow>=2.16
+torchmetrics>=1.4

@@ -184,16 +184,50 @@ Templates are included in:
 - [templates/genomics_manifest.example.csv](/Users/felipe/Documents/Playground/RadiogenPDAC/templates/genomics_manifest.example.csv)
 - [templates/phase_ingestion_manifest.example.csv](/Users/felipe/Documents/Playground/RadiogenPDAC/templates/phase_ingestion_manifest.example.csv)
 
+## Environment setup
+
+For the cluster workflow, start with a dedicated fine-tuning environment built from the new top-level [requirements.txt](/Users/felipe/Documents/Playground/RadiogenPDAC/requirements.txt). That file is intended for the `PDAC_Detection` fine-tuning, validation, and encoder-extraction pipeline.
+
+Example on a cluster that uses modules plus Conda:
+
+```bash
+module load miniconda
+conda create -y -n pdac-ft python=3.10
+conda activate pdac-ft
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+python -m pip install --no-build-isolation -e .
+```
+
+If you previously installed an older environment before this fix, repair it with:
+
+```bash
+python -m pip install --upgrade "setuptools>=68" "typing-extensions>=4.14.1"
+python -m pip install --no-build-isolation -e .
+```
+
+Quick sanity check:
+
+```bash
+radiogenpdac --help
+python -c "import torch, SimpleITK, typer, rich; print('env ok')"
+```
+
+Why I recommend this split:
+
+- the detector stack under `PDAC_Detection/` pins older imaging dependencies such as `monai==0.9.0`,
+- the later radiogenomic model training code may be cleaner in a second environment if you decide to use newer Lightning or MONAI tooling,
+- for the current smoke test and fine-tuning workflow, the `requirements.txt` environment is the right starting point.
+
 After replacing the example file paths with real cohort paths, validate manifests:
 
 ```bash
-python -m pip install --no-build-isolation -e .
 radiogenpdac validate-manifest \
   --cohort templates/cohort_manifest.example.csv \
   --genomics templates/genomics_manifest.example.csv
 ```
 
-If your cluster is air-gapped, pre-provision the Python dependencies in the environment first and then use the same editable install command.
+If your cluster is air-gapped, pre-provision the dependencies from `requirements.txt` in the environment first and then use the same editable install command.
 
 Merge manifests into a single training table:
 
@@ -556,6 +590,31 @@ radiogenpdac finetune-encoder \
 Repeat for arterial with dataset `202`. You can point both runs at the original venous-phase checkpoint from the challenge model, or at your own previously fine-tuned checkpoint if you want staged adaptation.
 
 During training, nnU-Net already tracks epoch-wise online pseudo-Dice on the validation batches. After training finishes, it also writes full validation predictions into `fold_X/validation/summary.json`.
+
+If you want a compact dashboard file you can watch during training, use:
+
+```bash
+radiogenpdac monitor-encoder-training \
+  --model-training-output-dir /path/to/nnUNet_results/Dataset201_PDACVenousMulticlassFinetune/nnUNetTrainer_ftce__nnUNetPlans__3d_fullres \
+  --fold 0 \
+  --poll-interval-sec 30
+```
+
+That writes these files into `fold_0/` by default:
+
+- `training_monitor.json`
+- `training_monitor.csv`
+
+The JSON includes:
+
+- current status such as `running` or `finished`
+- latest epoch, train loss, val loss, pseudo-Dice, EMA pseudo-Dice, and learning rate
+- best epoch so far by EMA pseudo-Dice
+- checkpoint presence for `checkpoint_latest.pth`, `checkpoint_best.pth`, and `checkpoint_final.pth`
+- trailing lines from the nnU-Net training log
+- final validation foreground Dice once `validation/summary.json` exists
+
+The CSV contains one row per completed epoch, so you can plot training curves or inspect drift over time.
 
 If you want the same tumor-coverage metric on the validation fold after fine-tuning, run `evaluate-encoder-model` again against the fine-tuned model directory.
 

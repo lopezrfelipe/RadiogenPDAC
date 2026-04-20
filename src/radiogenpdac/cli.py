@@ -602,6 +602,60 @@ def summarize_validation_tumor_metrics_command(
     )
 
 
+@app.command("monitor-encoder-training")
+def monitor_encoder_training_command(
+    model_training_output_dir: Path = typer.Option(..., exists=True, readable=True),
+    fold: int = typer.Option(0),
+    output_json: Path | None = typer.Option(
+        None,
+        help="Optional output JSON path. Defaults to fold_X/training_monitor.json.",
+    ),
+    output_csv: Path | None = typer.Option(
+        None,
+        help="Optional output CSV path. Defaults to fold_X/training_monitor.csv.",
+    ),
+    tail_lines: int = typer.Option(20, min=1, help="How many trailing training-log lines to include."),
+    poll_interval_sec: int = typer.Option(
+        0,
+        min=0,
+        help="If >0, keep refreshing the dashboard every N seconds until the run finishes or max-polls is reached.",
+    ),
+    max_polls: int | None = typer.Option(
+        None,
+        min=1,
+        help="Optional cap on the number of refresh cycles in watch mode.",
+    ),
+) -> None:
+    from radiogenpdac.training_monitor import watch_training_monitor, write_training_monitor_outputs
+
+    if poll_interval_sec > 0:
+        summary, json_path, csv_path = watch_training_monitor(
+            model_training_output_dir=model_training_output_dir,
+            fold=fold,
+            output_json=output_json,
+            output_csv=output_csv,
+            tail_lines=tail_lines,
+            poll_interval_sec=poll_interval_sec,
+            max_polls=max_polls,
+        )
+    else:
+        summary, json_path, csv_path = write_training_monitor_outputs(
+            model_training_output_dir=model_training_output_dir,
+            fold=fold,
+            output_json=output_json,
+            output_csv=output_csv,
+            tail_lines=tail_lines,
+        )
+
+    console.print(
+        f"[green]Training monitor updated.[/green] "
+        f"Status={summary['status']} "
+        f"Epoch={summary['last_completed_epoch']} "
+        f"EMA Dice={summary['latest_ema_fg_dice']} "
+        f"JSON={json_path} CSV={csv_path}"
+    )
+
+
 @app.command("run-phase-finetune-workflow")
 def run_phase_finetune_workflow_command(
     phase_manifest: Path = typer.Option(..., exists=True, readable=True),
