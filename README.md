@@ -629,6 +629,15 @@ ORIGINAL_MODEL_TRAINING_OUTPUT_DIR=/path/to/original/model_training_output_dir \
 sbatch --array=0-1 scripts/slurm/venous_smoke50_array.sbatch
 ```
 
+For the full venous fine-tune after dataset prep and preprocessing are already done, there is also a single-job SLURM script at [scripts/slurm/venous_full_fold0_ft.sbatch](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/venous_full_fold0_ft.sbatch). It launches fold `0` on `2` GPUs using the transferred `nnUNetPlansFrom107v3` setup.
+
+Submit it like this:
+
+```bash
+cd /path/to/project_root/RadiogenPDAC
+sbatch scripts/slurm/venous_full_fold0_ft.sbatch
+```
+
 If you want to re-run the prep stage from scratch for the same workflow directory, delete:
 
 - `../data/manifests/workflows/venous_smoke_50/.prep.done`
