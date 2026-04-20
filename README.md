@@ -618,6 +618,22 @@ The JSON includes:
 
 The CSV contains one row per completed epoch, so you can plot training curves or inspect drift over time.
 
+For a cluster smoke test with up to 50 complete venous cases, there is also a ready-made SLURM array script at [scripts/slurm/venous_smoke50_array.sbatch](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/venous_smoke50_array.sbatch). It serializes the shared dataset-prep stage once, then runs fold `0` and fold `1` independently on `2` GPUs each.
+
+Submit it like this:
+
+```bash
+cd /path/to/project_root/RadiogenPDAC
+PRETRAINED_WEIGHTS=/path/to/checkpoint_final.pth \
+ORIGINAL_MODEL_TRAINING_OUTPUT_DIR=/path/to/original/model_training_output_dir \
+sbatch --array=0-1 scripts/slurm/venous_smoke50_array.sbatch
+```
+
+If you want to re-run the prep stage from scratch for the same workflow directory, delete:
+
+- `../data/manifests/workflows/venous_smoke_50/.prep.done`
+- `../data/manifests/workflows/venous_smoke_50/.prep.lock` if it exists
+
 If you want the same tumor-coverage metric on the validation fold after fine-tuning, run `evaluate-encoder-model` again against the fine-tuned model directory.
 
 If you prefer to reuse the predictions already written by nnU-Net during final validation:
