@@ -33,6 +33,20 @@ DEFAULT_LABEL_MAP: dict[str, int] = {
 }
 
 
+def _build_contiguous_dataset_labels(
+    structures: list[str],
+    preferred_order: list[str] | None = None,
+) -> dict[str, int]:
+    ordered_structures = preferred_order or list(DEFAULT_LABEL_MAP.keys())
+    active = [structure for structure in ordered_structures if structure in structures]
+    extras = [structure for structure in structures if structure not in active]
+
+    dataset_labels = {"background": 0}
+    for label_value, structure in enumerate([*active, *extras], start=1):
+        dataset_labels[structure] = label_value
+    return dataset_labels
+
+
 def _is_missing(value: Any) -> bool:
     return value is None or (isinstance(value, float) and np.isnan(value)) or str(value).strip() == ""
 
@@ -504,10 +518,9 @@ def prepare_phase_finetune_dataset_from_ingestion(
         effective_label_map = {"tumor": 1}
     else:
         structure_priority = structure_priority or ["pancreas", "artery", "vein", "cyst", "tumor"]
-        dataset_labels = {"background": 0}
-        for structure in structure_priority:
-            if structure in label_values:
-                dataset_labels[structure] = int(label_values[structure])
+        active_structures = [structure for structure in structure_priority if structure in label_values]
+        preferred_label_order = [name for name, _ in sorted(label_values.items(), key=lambda item: int(item[1]))]
+        dataset_labels = _build_contiguous_dataset_labels(active_structures, preferred_order=preferred_label_order)
         effective_label_map = {structure: dataset_labels[structure] for structure in dataset_labels if structure != "background"}
 
     dataset_dir = Path(nnunet_raw_dir).expanduser().resolve() / f"Dataset{dataset_id:03d}_{dataset_name}"
