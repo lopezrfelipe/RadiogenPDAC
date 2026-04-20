@@ -1,0 +1,138 @@
+/cm/local/apps/slurm/var/spool/job1793201/slurm_script: line 14: activate: No such file or directory
+node185
+Mon Dec  9 13:32:09 EST 2024
+/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/amp/grad_scaler.py:131: UserWarning: torch.cuda.amp.GradScaler is enabled, but CUDA is not available.  Disabling.
+  warnings.warn(
+Using device: cuda:0
+
+#######################################################################
+Please cite the following paper when using nnU-Net:
+Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
+#######################################################################
+
+Traceback (most recent call last):
+  File "/home/z004jpuc/anaconda3/envs/nnunet/bin/nnUNetv2_train", line 8, in <module>
+    sys.exit(run_training_entry())
+  File "/data/rg_data/pct_wbo2/home/han.l/nnUNetMD/nnUNetMD/nnunetv2/run/run_training.py", line 253, in run_training_entry
+    run_training(args.dataset_name_or_id, args.configuration, args.fold, args.tr, args.p, args.pretrained_weights,
+  File "/data/rg_data/pct_wbo2/home/han.l/nnUNetMD/nnUNetMD/nnunetv2/run/run_training.py", line 196, in run_training
+    nnunet_trainer.run_training()
+  File "/data/rg_data/pct_wbo2/home/han.l/nnUNetMD/nnUNetMD/nnunetv2/training/nnUNetTrainer/nnUNetTrainer.py", line 1228, in run_training
+    self.on_train_start()
+  File "/data/rg_data/pct_wbo2/home/han.l/nnUNetMD/nnUNetMD/nnunetv2/training/nnUNetTrainer/nnUNetTrainer.py", line 789, in on_train_start
+    self.initialize()
+  File "/data/rg_data/pct_wbo2/home/han.l/nnUNetMD/nnUNetMD/nnunetv2/training/nnUNetTrainer/nnUNetTrainer.py", line 204, in initialize
+    self.network = self.build_network_architecture(self.plans_manager, self.dataset_json,
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1173, in to
+    return self._apply(convert)
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 779, in _apply
+    module._apply(fn)
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 779, in _apply
+    module._apply(fn)
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 779, in _apply
+    module._apply(fn)
+  [Previous line repeated 2 more times]
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 804, in _apply
+    param_applied = fn(param)
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1159, in convert
+    return t.to(
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/cuda/__init__.py", line 293, in _lazy_init
+    torch._C._cuda_init()
+RuntimeError: No CUDA GPUs are available
+/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/amp/grad_scaler.py:131: UserWarning: torch.cuda.amp.GradScaler is enabled, but CUDA is not available.  Disabling.
+  warnings.warn(
+Using device: cuda:0
+
+#######################################################################
+Please cite the following paper when using nnU-Net:
+Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
+#######################################################################
+
+Traceback (most recent call last):
+  File "/home/z004jpuc/anaconda3/envs/nnunet/bin/nnUNetv2_train", line 8, in <module>
+    sys.exit(run_training_entry())
+  File "/data/rg_data/pct_wbo2/home/han.l/nnUNetMD/nnUNetMD/nnunetv2/run/run_training.py", line 253, in run_training_entry
+    run_training(args.dataset_name_or_id, args.configuration, args.fold, args.tr, args.p, args.pretrained_weights,
+  File "/data/rg_data/pct_wbo2/home/han.l/nnUNetMD/nnUNetMD/nnunetv2/run/run_training.py", line 196, in run_training
+    nnunet_trainer.run_training()
+  File "/data/rg_data/pct_wbo2/home/han.l/nnUNetMD/nnUNetMD/nnunetv2/training/nnUNetTrainer/nnUNetTrainer.py", line 1228, in run_training
+    self.on_train_start()
+  File "/data/rg_data/pct_wbo2/home/han.l/nnUNetMD/nnUNetMD/nnunetv2/training/nnUNetTrainer/nnUNetTrainer.py", line 789, in on_train_start
+    self.initialize()
+  File "/data/rg_data/pct_wbo2/home/han.l/nnUNetMD/nnUNetMD/nnunetv2/training/nnUNetTrainer/nnUNetTrainer.py", line 204, in initialize
+    self.network = self.build_network_architecture(self.plans_manager, self.dataset_json,
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1173, in to
+    return self._apply(convert)
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 779, in _apply
+    module._apply(fn)
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 779, in _apply
+    module._apply(fn)
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 779, in _apply
+    module._apply(fn)
+  [Previous line repeated 2 more times]
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 804, in _apply
+    param_applied = fn(param)
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1159, in convert
+    return t.to(
+  File "/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/cuda/__init__.py", line 293, in _lazy_init
+    torch._C._cuda_init()
+RuntimeError: No CUDA GPUs are available
+/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/optim/lr_scheduler.py:28: UserWarning: The verbose parameter is deprecated. Please use get_last_lr() to access the learning rate.
+  warnings.warn("The verbose parameter is deprecated. Please use get_last_lr() "
+Using device: cuda:0
+
+#######################################################################
+Please cite the following paper when using nnU-Net:
+Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
+#######################################################################
+
+
+This is the configuration used by this training:
+Configuration name: 3d_fullres
+ {'data_identifier': 'nnUNetPlans_3d_fullres', 'preprocessor_name': 'DefaultPreprocessor', 'batch_size': 2, 'patch_size': [40, 160, 288], 'median_image_size_in_voxels': [68.0, 242.0, 435.0], 'spacing': [1.5, 0.746999979019165, 0.746999979019165], 'normalization_schemes': ['CTNormalization'], 'use_mask_for_norm': [False], 'UNet_class_name': 'PlainConvUNet', 'UNet_base_num_features': 32, 'n_conv_per_stage_encoder': [2, 2, 2, 2, 2, 2], 'n_conv_per_stage_decoder': [2, 2, 2, 2, 2], 'num_pool_per_axis': [3, 5, 5], 'pool_op_kernel_sizes': [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]], 'conv_kernel_sizes': [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]], 'unet_max_num_features': 320, 'resampling_fn_data': 'resample_data_or_seg_to_shape', 'resampling_fn_seg': 'resample_data_or_seg_to_shape', 'resampling_fn_data_kwargs': {'is_seg': False, 'order': 3, 'order_z': 0, 'force_separate_z': None}, 'resampling_fn_seg_kwargs': {'is_seg': True, 'order': 1, 'order_z': 0, 'force_separate_z': None}, 'resampling_fn_probabilities': 'resample_data_or_seg_to_shape', 'resampling_fn_probabilities_kwargs': {'is_seg': False, 'order': 1, 'order_z': 0, 'force_separate_z': None}, 'batch_dice': False} 
+
+These are the global plan.json settings:
+ {'dataset_name': 'Dataset107_PDAC_Detection', 'plans_name': 'nnUNetPlans', 'original_median_spacing_after_transp': [1.5, 0.746999979019165, 0.746999979019165], 'original_median_shape_after_transp': [61, 244, 438], 'image_reader_writer': 'SimpleITKIO', 'transpose_forward': [0, 1, 2], 'transpose_backward': [0, 1, 2], 'experiment_planner_used': 'ExperimentPlanner', 'label_manager': 'LabelManager', 'foreground_intensity_properties_per_channel': {'0': {'max': 5488.0, 'mean': 109.38802337646484, 'median': 105.0, 'min': -1024.0, 'percentile_00_5': -55.0, 'percentile_99_5': 428.0, 'std': 77.23406982421875}}} 
+
+2024-12-09 13:59:10.241147: unpacking dataset...
+/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/optim/lr_scheduler.py:28: UserWarning: The verbose parameter is deprecated. Please use get_last_lr() to access the learning rate.
+  warnings.warn("The verbose parameter is deprecated. Please use get_last_lr() "
+Using device: cuda:0
+
+#######################################################################
+Please cite the following paper when using nnU-Net:
+Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
+#######################################################################
+
+
+This is the configuration used by this training:
+Configuration name: 3d_fullres
+ {'data_identifier': 'nnUNetPlans_3d_fullres', 'preprocessor_name': 'DefaultPreprocessor', 'batch_size': 2, 'patch_size': [40, 160, 288], 'median_image_size_in_voxels': [68.0, 242.0, 435.0], 'spacing': [1.5, 0.746999979019165, 0.746999979019165], 'normalization_schemes': ['CTNormalization'], 'use_mask_for_norm': [False], 'UNet_class_name': 'ResidualEncoderUNet', 'UNet_base_num_features': 32, 'n_conv_per_stage_encoder': [2, 2, 2, 2, 2, 2], 'n_conv_per_stage_decoder': [2, 2, 2, 2, 2], 'num_pool_per_axis': [3, 5, 5], 'pool_op_kernel_sizes': [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]], 'conv_kernel_sizes': [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]], 'unet_max_num_features': 320, 'resampling_fn_data': 'resample_data_or_seg_to_shape', 'resampling_fn_seg': 'resample_data_or_seg_to_shape', 'resampling_fn_data_kwargs': {'is_seg': False, 'order': 3, 'order_z': 0, 'force_separate_z': None}, 'resampling_fn_seg_kwargs': {'is_seg': True, 'order': 1, 'order_z': 0, 'force_separate_z': None}, 'resampling_fn_probabilities': 'resample_data_or_seg_to_shape', 'resampling_fn_probabilities_kwargs': {'is_seg': False, 'order': 1, 'order_z': 0, 'force_separate_z': None}, 'batch_dice': False} 
+
+These are the global plan.json settings:
+ {'dataset_name': 'Dataset107_PDAC_Detection', 'plans_name': 'nnUNetPlans_v2', 'original_median_spacing_after_transp': [1.5, 0.746999979019165, 0.746999979019165], 'original_median_shape_after_transp': [61, 244, 438], 'image_reader_writer': 'SimpleITKIO', 'transpose_forward': [0, 1, 2], 'transpose_backward': [0, 1, 2], 'experiment_planner_used': 'ExperimentPlanner', 'label_manager': 'LabelManager', 'foreground_intensity_properties_per_channel': {'0': {'max': 5488.0, 'mean': 109.38802337646484, 'median': 105.0, 'min': -1024.0, 'percentile_00_5': -55.0, 'percentile_99_5': 428.0, 'std': 77.23406982421875}}} 
+
+2024-12-09 14:01:01.168363: unpacking dataset...
+/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/onnx/symbolic_helper.py:1515: UserWarning: ONNX export mode is set to TrainingMode.EVAL, but operator 'instance_norm' is set to train=True. Exporting with train=True.
+  warnings.warn(
+2024-12-09 14:06:23.502549: unpacking done...
+2024-12-09 14:06:23.824500: do_dummy_2d_data_aug: True
+2024-12-09 14:06:23.955499: Using splits from existing split file: /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_preprocessed/Dataset107_PDAC_Detection/splits_final.json
+2024-12-09 14:06:24.230564: The split file contains 5 splits.
+2024-12-09 14:06:24.248027: Desired fold for training: 4
+2024-12-09 14:06:24.256512: This split has 1791 training and 447 validation cases.
+2024-12-09 14:28:15.853968: 
+2024-12-09 14:28:15.861016: Epoch 0
+2024-12-09 14:28:15.863846: Current learning rate: 0.01
+/home/z004jpuc/anaconda3/envs/nnunet/lib/python3.9/site-packages/torch/onnx/symbolic_helper.py:1515: UserWarning: ONNX export mode is set to TrainingMode.EVAL, but operator 'instance_norm' is set to train=True. Exporting with train=True.
+  warnings.warn(
+2024-12-09 14:07:57.666610: unpacking done...
+2024-12-09 14:07:58.002757: do_dummy_2d_data_aug: True
+2024-12-09 14:07:58.147187: Using splits from existing split file: /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_preprocessed/Dataset107_PDAC_Detection/splits_final.json
+2024-12-09 14:07:58.176983: The split file contains 5 splits.
+2024-12-09 14:07:58.191515: Desired fold for training: 0
+2024-12-09 14:07:58.203469: This split has 1790 training and 448 validation cases.
+2024-12-09 14:34:23.954140: 
+2024-12-09 14:34:23.978092: Epoch 0
+2024-12-09 14:34:23.986793: Current learning rate: 0.01
+slurmstepd: error: *** JOB 1793201 ON node185 CANCELLED AT 2024-12-09T14:43:43 ***

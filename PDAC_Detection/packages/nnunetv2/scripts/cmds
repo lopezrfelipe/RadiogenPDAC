@@ -1,0 +1,371 @@
+conda activate nnunet
+module load cuda/cuda-11.1
+module load cudnn/9.0.0-cuda-12
+export nnUNet_raw="/pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw" 
+export nnUNet_preprocessed="/pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_preprocessed" 
+export nnUNet_results="/pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results"
+nnUNetv2_train 107 3d_fullres 3 -tr nnUNetTrainerCELoss -p nnUNetPlans_v2
+
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans_v3 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v3__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans_v32 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v32__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans_v33 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v33__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans_v34 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v34__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans_v35 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v35__3d_fullres/fold_0/checkpoint_final.pth
+
+
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans_v3 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v3__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans_v2 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v2__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans_v5 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v5__3d_fullres/fold_0/checkpoint_final.pth
+
+
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ftce -p nnUNetPlans_v3 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v3__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ftce -p nnUNetPlans -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ftce -p nnUNetPlans_v2 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v2__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_ftce -p nnUNetPlans_v5 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v5__3d_fullres/fold_0/checkpoint_final.pth
+
+
+nnUNetv2_train 108 3d_fullres 0 -tr nnUNetTrainer_ft -p nnUNetPlans_v2 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v2__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans_v2 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v2__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 0 -tr nnUNetTrainer_ftce -p nnUNetPlans_v2 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v2__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 1 -tr nnUNetTrainer_ftce -p nnUNetPlans_v2 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v2__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 0 -tr nnUNetTrainer_fttopk -p nnUNetPlans_v2 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v2__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 1 -tr nnUNetTrainer_fttopk -p nnUNetPlans_v2 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v2__3d_fullres/fold_0/checkpoint_final.pth
+
+nnUNetv2_train 108 3d_fullres 0 -tr nnUNetTrainer_ft -p nnUNetPlans -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 1 -tr nnUNetTrainer_ft -p nnUNetPlans -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 1 -tr nnUNetTrainer_ftce -p nnUNetPlans -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 1 -tr nnUNetTrainer_fttopk -p nnUNetPlans -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth
+
+nnUNetv2_train 108 3d_fullres 1 -tr nnUNetTrainer_ftce -p nnUNetPlans_v3 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v3__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 1 -tr nnUNetTrainer_fttopk -p nnUNetPlans_v3 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v3__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 1 -tr nnUNetTrainer_ftce -p nnUNetPlans_v5 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v5__3d_fullres/fold_0/checkpoint_final.pth
+nnUNetv2_train 108 3d_fullres 1 -tr nnUNetTrainer_fttopk -p nnUNetPlans_v5 -pretrained_weights /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainer__nnUNetPlans_v5__3d_fullres/fold_0/checkpoint_final.pth
+
+# equal split
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainerCELossLesionSplit -p nnUNetPlans_v2 
+
+# oversample
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainerCELoss2 -p nnUNetPlans_v2
+
+
+# best
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainerCELoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainerCELoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 2 -tr nnUNetTrainerCELoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 3 -tr nnUNetTrainerCELoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 4 -tr nnUNetTrainerCELoss -p nnUNetPlans_v2
+
+
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainerWCELoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainerWCELoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 2 -tr nnUNetTrainerWCELoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 3 -tr nnUNetTrainerWCELoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 4 -tr nnUNetTrainerWCELoss -p nnUNetPlans_v2
+
+# next try
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_FocalLoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_FocalLoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 2 -tr nnUNetTrainer_FocalLoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 3 -tr nnUNetTrainer_FocalLoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 4 -tr nnUNetTrainer_FocalLoss -p nnUNetPlans_v2
+
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_WFocalLoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_WFocalLoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 2 -tr nnUNetTrainer_WFocalLoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 3 -tr nnUNetTrainer_WFocalLoss -p nnUNetPlans_v2
+nnUNetv2_train 107 3d_fullres 4 -tr nnUNetTrainer_WFocalLoss -p nnUNetPlans_v2
+
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainerCELoss -p nnUNetPlans
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainerCELoss -p nnUNetPlans
+nnUNetv2_train 107 3d_fullres 2 -tr nnUNetTrainerCELoss -p nnUNetPlans
+nnUNetv2_train 107 3d_fullres 3 -tr nnUNetTrainerCELoss -p nnUNetPlans
+nnUNetv2_train 107 3d_fullres 4 -tr nnUNetTrainerCELoss -p nnUNetPlans
+
+
+
+
+
+
+
+
+
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_Loss_CE_checkpoints -p nnUNetPlans 
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_Loss_CE_checkpoints -p nnUNetPlans_v2 
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_Loss_CE_checkpoints -p nnUNetPlans_v3 
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_Loss_CE_checkpoints -p nnUNetPlans_v5 
+
+
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_Loss_CE_checkpoints -p nnUNetPlans_v2 
+nnUNetv2_train 107 3d_fullres 1 -tr nnUNetTrainer_Loss_CE_checkpoints -p nnUNetPlans_v2 
+nnUNetv2_train 107 3d_fullres 2 -tr nnUNetTrainer_Loss_CE_checkpoints -p nnUNetPlans_v2 
+nnUNetv2_train 107 3d_fullres 3 -tr nnUNetTrainer_Loss_CE_checkpoints -p nnUNetPlans_v2 
+nnUNetv2_train 107 3d_fullres 4 -tr nnUNetTrainer_Loss_CE_checkpoints -p nnUNetPlans_v2 
+
+
+
+# nndetection
+conda create --prefix /pct_wbo2/home/han.l/envs/nndet python=3.8 -y
+conda activate /pct_wbo2/home/han.l/envs/nndet
+module load gcc/8.1.0
+module load cuda/cuda-11.1
+module load cudnn/8.0.5_cuda-11.1
+pip install setuptools==59.5.0
+pip install torch==1.10.1+cu111 torchvision==0.11.2+cu111 torchaudio==0.10.1 -f https://download.pytorch.org/whl/cu111/torch_stable.html
+pip install -e . 
+
+export det_data="/pct_wbo2/home/han.l/Panorama/nnDetection/data"
+export det_models="/pct_wbo2/home/han.l/Panorama/nnDetection/models"
+export OMP_NUM_THREADS=1
+export det_num_threads=12
+
+nndet_prep 001
+nndet_unpack ${det_data}/Task001D3_PDAC/preprocessed/D3V001_3d/imagesTr 6
+nndet_train 001 --sweep
+nndet_consolidate 001 RetinaUNetV001_D3V001_3d --sweep_boxes --num_folds 1
+nndet_predict 001 RetinaUNetV001_D3V001_3d --fold -1
+
+
+nnUNetv2_plan_and_preprocess -d 103 --verify_dataset_integrity -c 3d_fullres 
+nnUNetv2_plan_and_preprocess -d 105 --verify_dataset_integrity -c 3d_fullres 
+
+nnUNetv2_plan_and_preprocess -d 109 --verify_dataset_integrity -c 3d_fullres 
+
+
+nnUNetv2_train 103 3d_fullres 0 -tr nnUNetTrainer -p nnUNetPlans_Res
+
+nnUNetv2_train 109 3d_fullres 1
+
+
+nnUNetv2_train 104 3d_fullres 0 -tr nnUNetTrainer_Loss_CE_checkpoints --c --npz
+
+nnUNetv2_train 104 3d_fullres 0 -tr nnUNetTrainer_Loss_TVCE_checkpoints -p nnUNetPlans_Res --npz
+nnUNetv2_train 105 3d_fullres 0 -tr nnUNetTrainer_Loss_TVCE_checkpoints_lesion -p nnUNetPlans_Res_lesion --npz
+nnUNetv2_train 104 3d_fullres 0 -tr nnUNetTrainer_Loss_TVCE_checkpoints_largerTV -p nnUNetPlans_Res --npz
+
+
+nnUNetv2_train 106 3d_fullres 0 -tr nnUNetTrainer -p nnUNetPlans
+nnUNetv2_train 106 3d_fullres 0 -tr nnUNetTrainer -p nnUNetPlans_v2 
+nnUNetv2_train 106 3d_fullres 0 -tr nnUNetTrainer_panorama -p nnUNetPlans
+nnUNetv2_train 106 3d_fullres 0 -tr nnUNetTrainer_panorama -p nnUNetPlans_v2
+nnUNetv2_train 106 3d_fullres 0 -tr nnUNetTrainer_Loss_TVCE_checkpoints -p nnUNetPlans
+
+
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer -p nnUNetPlans
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer -p nnUNetPlans_v2 
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_panorama -p nnUNetPlans
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_panorama -p nnUNetPlans_v2 --c
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_Loss_CE_checkpoints -p nnUNetPlans_v2 --c --npz
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer_Loss_TopK_checkpoints -p nnUNetPlans_v2 --c --npz
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer -p nnUNetPlans_v3 --npz
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer -p nnUNetPlans_v4 --npz
+nnUNetv2_train 107 3d_fullres 0 -tr nnUNetTrainer -p nnUNetPlans_v5
+
+----------------------------------------
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal_el/fold_0/validation_images \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal_el/fold_0/prediction \
+ -d 107 \
+ -c 3d_fullres \
+ -f 0 \
+ --save_probabilities \
+ -p nnUNetPlans_v2 \
+ -tr nnUNetTrainerCELossLesionSplit
+
+ nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal_el/fold_1/validation_images \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal_el/fold_1/prediction \
+ -d 107 \
+ -c 3d_fullres \
+ -f 1 \
+ --save_probabilities \
+ -p nnUNetPlans_v2 \
+ -tr nnUNetTrainerCELossLesionSplit
+
+ nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal_el/fold_2/validation_images \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal_el/fold_2/prediction \
+ -d 107 \
+ -c 3d_fullres \
+ -f 2 \
+ --save_probabilities \
+ -p nnUNetPlans_v2 \
+ -tr nnUNetTrainerCELossLesionSplit
+
+ nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal_el/fold_3/validation_images \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal_el/fold_3/prediction \
+ -d 107 \
+ -c 3d_fullres \
+ -f 3 \
+ --save_probabilities \
+ -p nnUNetPlans_v2 \
+ -tr nnUNetTrainerCELossLesionSplit
+
+ nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal_el/fold_4/validation_images \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal_el/fold_4/prediction \
+ -d 107 \
+ -c 3d_fullres \
+ -f 4 \
+ --save_probabilities \
+ -p nnUNetPlans_v2 \
+ -tr nnUNetTrainerCELossLesionSplit
+
+ ----------------------------------------
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/fold_0/validation_images \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/fold_0/prediction_wce \
+ -d 107 \
+ -c 3d_fullres \
+ -f 0 \
+ --save_probabilities \
+ -p nnUNetPlans_v2 \
+ -tr nnUNetTrainerWCELoss
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/fold_1/validation_images \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/fold_1/prediction \
+ -d 107 \
+ -c 3d_fullres \
+ -f 1 \
+ --save_probabilities \
+ -p nnUNetPlans_v2 \
+ -tr nnUNetTrainerCELoss
+
+ nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/fold_2/validation_images \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/fold_2/prediction \
+ -d 107 \
+ -c 3d_fullres \
+ -f 2 \
+ --save_probabilities \
+ -p nnUNetPlans_v2 \
+ -tr nnUNetTrainerCELoss
+
+ nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/fold_3/validation_images \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/fold_3/prediction \
+ -d 107 \
+ -c 3d_fullres \
+ -f 3 \
+ --save_probabilities \
+ -p nnUNetPlans_v2 \
+ -tr nnUNetTrainerCELoss
+
+ nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/fold_4/validation_images \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/fold_4/prediction \
+ -d 107 \
+ -c 3d_fullres \
+ -f 4 \
+ --save_probabilities \
+ -p nnUNetPlans_v2 \
+ -tr nnUNetTrainerCELoss
+
+
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesTr \
+ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset107_PDAC_Detection/imagesVal/Train_v5/ \
+ -d 107 \
+ -c 3d_fullres \
+ -f 0 \
+ --save_probabilities \
+ -p nnUNetPlans_v5 \
+ -tr nnUNetTrainer
+
+
+
+
+
+
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/imagesTr/ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_0/ -d 103 -c 3d_fullres -f 0 --save_probabilities
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/imagesTr/ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_1/ -d 103 -c 3d_fullres -f 1 --save_probabilities
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/imagesTr/ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_2/ -d 103 -c 3d_fullres -f 2 --save_probabilities
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/imagesTr/ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_3/ -d 103 -c 3d_fullres -f 3 --save_probabilities
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/imagesTr/ -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_4/ -d 103 -c 3d_fullres -f 4 --save_probabilities
+
+nnUNetv2_ensemble -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_0/ \
+    /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_1/ \
+    /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_2/ \
+    /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_3/ \
+    /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_4/ \
+    -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/predTr_ensemble/ 
+
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/FLARE/PublicValidation/imagesVal -o /pct_wbo2/home/han.l/FLARE/PublicValidation/submit_fold0 -d 600 -c 3d_fullres -f 0 --save_probabilities
+nnUNetv2_predict -i /pct_wbo2/home/han.l/FLARE/PublicValidation/imagesVal -o /pct_wbo2/home/han.l/FLARE/PublicValidation/submit_fold1 -d 600 -c 3d_fullres -f 1 --save_probabilities
+nnUNetv2_predict -i /pct_wbo2/home/han.l/FLARE/PublicValidation/imagesVal -o /pct_wbo2/home/han.l/FLARE/PublicValidation/submit_fold2 -d 600 -c 3d_fullres -f 2 --save_probabilities
+nnUNetv2_predict -i /pct_wbo2/home/han.l/FLARE/PublicValidation/imagesVal -o /pct_wbo2/home/han.l/FLARE/PublicValidation/submit_fold3 -d 600 -c 3d_fullres -f 3 --save_probabilities
+nnUNetv2_predict -i /pct_wbo2/home/han.l/FLARE/PublicValidation/imagesVal -o /pct_wbo2/home/han.l/FLARE/PublicValidation/submit_fold4 -d 600 -c 3d_fullres -f 4 --save_probabilities
+nnUNetv2_ensemble -i /pct_wbo2/home/han.l/FLARE/PublicValidation/submit_fold0 /pct_wbo2/home/han.l/FLARE/PublicValidation/submit_fold1 
+
+/pct_wbo2/home/han.l/FLARE/PublicValidation/submit_fold2 /pct_wbo2/home/han.l/FLARE/PublicValidation/submit_fold3 
+/pct_wbo2/home/han.l/FLARE/PublicValidation/submit_fold4 -o /pct_wbo2/home/han.l/FLARE/PublicValidation/submit_ensemble 
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/imagesTr \
+    -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset103_PANORAMA_baseline_Pancreas_Segmentation/LowResPred -d 103 -c 3d_fullres -f 0
+
+
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset106_PDAC_Detection_LargerROI/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/validation_images \
+    -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset106_PDAC_Detection_LargerROI/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/validation_check \
+    -d 106 \
+    -tr nnUNetTrainer \
+    -p nnUNetPlans \
+    -f 0 \
+    -c 3d_fullres \
+    --save_probabilities
+    
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset106_PDAC_Detection_LargerROI/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/validation_images \
+    -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset106_PDAC_Detection_LargerROI/nnUNetTrainer__nnUNetPlans_v2__3d_fullres/fold_0/validation_check \
+    -d 106 \
+    -tr nnUNetTrainer \
+    -p nnUNetPlans_v2 \
+    -f 0 \
+    -c 3d_fullres \
+    --save_probabilities
+
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset106_PDAC_Detection_LargerROI/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/validation_images \
+    -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset106_PDAC_Detection_LargerROI/nnUNetTrainer_panorama__nnUNetPlans__3d_fullres/fold_0/validation_check \
+    -d 106 \
+    -tr nnUNetTrainer_panorama \
+    -p nnUNetPlans \
+    -f 0 \
+    -c 3d_fullres \
+    --save_probabilities
+    
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset106_PDAC_Detection_LargerROI/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/validation_images \
+    -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_results/Dataset106_PDAC_Detection_LargerROI/nnUNetTrainer_panorama__nnUNetPlans_v2__3d_fullres/fold_0/validation_check \
+    -d 106 \
+    -tr nnUNetTrainer_panorama \
+    -p nnUNetPlans_v2 \
+    -f 0 \
+    -c 3d_fullres \
+    --save_probabilities
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset106_PDAC_Detection_LargerROI/imagesTr \
+    -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset106_PDAC_Detection_LargerROI/predsTr \
+    -d 106 \
+    -tr nnUNetTrainer_panorama \
+    -p nnUNetPlans_v2 \
+    -f 0 \
+    -c 3d_fullres \
+    --save_probabilities
+
+
+nnUNetv2_predict -i /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset106_PDAC_Detection_LargerROI/imagesTr \
+    -o /pct_wbo2/home/han.l/nnUNetMD/workspace/nnUNet_raw/Dataset106_PDAC_Detection_LargerROI/predsTr_unet \
+    -d 106 \
+    -tr nnUNetTrainer_panorama \
+    -p nnUNetPlans \
+    -f 0 \
+    -c 3d_fullres \
+    --save_probabilities
+    
