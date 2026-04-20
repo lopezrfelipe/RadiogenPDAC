@@ -219,8 +219,9 @@ def finetune_phase_encoder(
     from nnunetv2.run.run_training import run_training
     from nnunetv2.utilities.dataset_name_id_conversion import convert_id_to_dataset_name
 
+    dataset_name = convert_id_to_dataset_name(dataset_id)
     run_training(
-        dataset_name_or_id=dataset_id,
+        dataset_name_or_id=dataset_name,
         configuration=configuration,
         fold=fold,
         trainer_class_name=trainer_name,
@@ -233,7 +234,6 @@ def finetune_phase_encoder(
         device=torch.device(device),
     )
 
-    dataset_name = convert_id_to_dataset_name(dataset_id)
     return (
         Path(nnunet_results_dir).expanduser().resolve()
         / dataset_name
