@@ -1,0 +1,4 @@
+patient_id,phase,image_path,segmentation_dir,study_id,site,split_group,split,age,sex,ca19_9,stage
+P001,venous,/data/nifti/P001/venous.nii.gz,/data/segmentations/P001/venous,STUDY_001,site_a,P001,train,63,M,1480,III
+P001,arterial,/data/nifti/P001/arterial.nii.gz,/data/segmentations/P001/arterial,STUDY_001,site_a,P001,train,63,M,1480,III
+P002,venous,/data/nifti/P002/venous.nii.gz,/data/segmentations/P002/venous,STUDY_002,site_b,P002,val,58,F,620,II

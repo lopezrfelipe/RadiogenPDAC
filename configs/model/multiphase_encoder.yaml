@@ -1,0 +1,32 @@
+name: pdac_multiphase_signature_encoder
+backbone_family: dual_phase_late_fusion
+image_backbone: residual_3d_cnn
+phase_fusion: transformer_attention
+token_embedding_dim: 256
+token_encoder_channels: [32, 64, 128, 256]
+transformer_layers: 2
+transformer_heads: 8
+dropout: 0.1
+separate_phase_encoders: true
+context_streams:
+  - tumor_roi
+  - pancreas_context
+  - vascular_context
+  - duct_context
+mask_usage:
+  manual_masks_as_hard_attention: true
+  pseudo_masks_as_soft_attention: true
+clinical_covariates:
+  - age
+  - sex
+  - ca19_9
+  - stage
+heads:
+  latent_signature_regression: 16
+  pathway_score_regression: 8
+  subtype_classification: 2
+  mutation_classification:
+    - KRAS
+    - TP53
+    - SMAD4
+    - CDKN2A

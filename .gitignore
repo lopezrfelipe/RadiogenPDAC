@@ -1,0 +1,17 @@
+.DS_Store
+.pytest_cache/
+.ruff_cache/
+.venv/
+build/
+dist/
+mlruns/
+outputs/
+artifacts/
+checkpoints/
+logs/
+*.egg-info/
+*.pyc
+__pycache__/
+data/
+.env.local
+*.local.yaml

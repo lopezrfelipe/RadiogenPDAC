@@ -1,0 +1,3 @@
+patient_id,study_id,site,venous_image,arterial_image,venous_tumor_mask,arterial_tumor_mask,tumor_mask,venous_pancreas_mask,arterial_pancreas_mask,pancreas_mask,detector_json,venous_encoder_features,arterial_encoder_features,split_group,age,sex,ca19_9,stage
+P001,STUDY_001,site_a,/data/nifti/P001/venous.nii.gz,/data/nifti/P001/arterial.nii.gz,/data/masks/P001/venous_tumor.nii.gz,/data/masks/P001/arterial_tumor.nii.gz,,/data/masks/P001/venous_pancreas.nii.gz,/data/masks/P001/arterial_pancreas.nii.gz,,/data/detector/P001.json,/data/features/P001/venous_encoder_features.npy,/data/features/P001/arterial_encoder_features.npy,P001,63,M,1480,III
+P002,STUDY_002,site_b,/data/nifti/P002/venous.nii.gz,,,,,,/data/masks/P002/pancreas.nii.gz,/data/detector/P002.json,,,P002,58,F,620,II

@@ -1,0 +1,27 @@
+strategy: hybrid_multitask
+
+recommendation:
+  primary_target_family:
+    - transcriptomic_latent_factors
+    - pathway_program_scores
+    - consensus_subtype
+  secondary_target_family:
+    - major_driver_mutations
+    - tumor_stroma_ratio
+  avoid_using_clusters_as_primary_label: true
+
+latent_representation:
+  method: pca
+  n_factors: 16
+  fit_on_train_only: true
+
+auxiliary_clustering:
+  enabled: true
+  role: auxiliary_only
+  method: hdbscan
+  source_space: latent_factors
+  minimum_cluster_size: 10
+
+calibration:
+  report_per_target: true
+  export_uncertainty: true

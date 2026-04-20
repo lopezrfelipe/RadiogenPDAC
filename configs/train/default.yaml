@@ -1,0 +1,36 @@
+seed: 2026
+framework: lightning_ddp
+
+trainer:
+  accelerator: gpu
+  strategy: ddp
+  devices: 4
+  num_nodes: 1
+  precision: 16-mixed
+  max_epochs: 200
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 2
+  deterministic: false
+
+optimization:
+  optimizer: adamw
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  scheduler: cosine_with_warmup
+  warmup_epochs: 10
+
+batching:
+  train_batch_size: 2
+  eval_batch_size: 2
+  num_workers: 8
+  persistent_workers: true
+
+tracking:
+  backend: mlflow
+  uri: file:./mlruns
+  log_model_checkpoints: true
+
+evaluation:
+  internal_cv_folds: 5
+  holdout_fraction: 0.15
+  bootstrap_iterations: 2000
