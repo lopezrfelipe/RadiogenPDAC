@@ -909,7 +909,7 @@ def _predict_structure_masks_worker(
         image_path = Path(str(row["image_path"])).expanduser().resolve()
         case_id = str(row["case_id"])
         prediction_base = Path(predictions_dir) / case_id
-        prediction_path = prediction_base.with_suffix(".nii.gz")
+        prediction_path = Path(f"{prediction_base}.nii.gz")
         mask_path = Path(structure_dir) / f"{case_id}_{structure_name}.nii.gz"
 
         if (
