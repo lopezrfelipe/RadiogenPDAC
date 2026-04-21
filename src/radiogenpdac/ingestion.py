@@ -844,15 +844,16 @@ def evaluate_encoder_model_on_split(
 
 
 def _build_prediction_case_id(row: pd.Series, fallback_index: int) -> str:
+    image_path = row.get("image_path")
+    if not _is_missing(image_path):
+        return _normalize_filename(Path(str(image_path)).name)
+
     patient_id = str(row.get("patient_id", "")).strip()
     phase = str(row.get("phase", "")).strip().lower()
     if patient_id and phase:
         return f"{patient_id}_{phase}".replace(" ", "_")
     if patient_id:
         return patient_id.replace(" ", "_")
-    image_path = row.get("image_path")
-    if not _is_missing(image_path):
-        return _normalize_filename(Path(str(image_path)).name)
     return f"case_{fallback_index:04d}"
 
 
