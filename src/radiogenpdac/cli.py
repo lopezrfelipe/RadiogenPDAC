@@ -10,6 +10,7 @@ from radiogenpdac.framework import load_yaml, render_framework_summary, write_su
 from radiogenpdac.manifests import (
     COHORT_REQUIRED_COLUMNS,
     GENOMICS_REQUIRED_COLUMNS,
+    build_hybrid_structure_manifest,
     merge_manifests,
     validate_manifest,
 )
@@ -50,6 +51,26 @@ def merge_manifests_command(
 ) -> None:
     merged = merge_manifests(cohort, genomics, output, join_key=join_key)
     console.print(f"[green]Merged {len(merged)} rows into {output}.[/green]")
+
+
+@app.command("build-hybrid-structure-manifest")
+def build_hybrid_structure_manifest_command(
+    base_manifest: Path = typer.Option(..., exists=True, readable=True),
+    override_manifest: Path = typer.Option(..., exists=True, readable=True),
+    output_manifest: Path = typer.Option(..., help="Path to the hybrid output CSV."),
+    output_mask_dir: Path = typer.Option(..., help="Directory for generated union masks."),
+    structures: str = typer.Option("artery", help="Comma-separated structures to union from the override manifest."),
+    join_keys: str = typer.Option("patient_id,phase", help="Comma-separated join columns shared by both manifests."),
+) -> None:
+    merged = build_hybrid_structure_manifest(
+        base_manifest_path=base_manifest,
+        override_manifest_path=override_manifest,
+        output_manifest_path=output_manifest,
+        output_mask_dir=output_mask_dir,
+        structures=[item.strip() for item in structures.split(",") if item.strip()],
+        join_keys=[item.strip() for item in join_keys.split(",") if item.strip()],
+    )
+    console.print(f"[green]Built hybrid manifest with {len(merged)} rows at {output_manifest}.[/green]")
 
 
 @app.command("make-splits")
@@ -515,8 +536,8 @@ def prepare_ingested_encoder_dataset_command(
         help="Crop margin in mm as x,y,z around the crop structure.",
     ),
     structure_priority: str = typer.Option(
-        "pancreas,artery,vein,cyst,tumor",
-        help="Comma-separated merge priority for multiclass labels.",
+        "pancreas,artery,vein,tumor,cbd,duct,cyst",
+        help="Comma-separated overwrite order for multiclass labels. Later structures overwrite earlier ones.",
     ),
     label_map_json: str | None = typer.Option(
         None,
@@ -616,6 +637,56 @@ def evaluate_encoder_model_command(
     console.print(
         f"[green]Evaluation complete. Mean Dice={summary['mean_dice']:.4f}, "
         f"mean tumor GT coverage={summary['mean_tumor_gt_coverage']:.4f}[/green]"
+    )
+
+
+@app.command("build-hybrid-structure-manifest-from-model")
+def build_hybrid_structure_manifest_from_model_command(
+    phase_manifest: Path = typer.Option(..., exists=True, readable=True),
+    output_manifest: Path = typer.Option(..., help="Hybrid manifest CSV to write."),
+    output_mask_dir: Path = typer.Option(..., help="Directory for predicted and hybrid masks."),
+    pdac_root: Path = typer.Option(Path("PDAC_Detection"), exists=True, file_okay=False, readable=True),
+    nnunet_raw_dir: Path = typer.Option(...),
+    nnunet_preprocessed_dir: Path = typer.Option(...),
+    nnunet_results_dir: Path = typer.Option(...),
+    model_training_output_dir: Path = typer.Option(..., exists=True, readable=True),
+    structure_name: str = typer.Option("artery"),
+    prediction_label: int = typer.Option(
+        3,
+        help="Integer label to extract from the baseline model predictions. For Dataset107 artery this is 3.",
+    ),
+    checkpoint_name: str = typer.Option("checkpoint_final.pth"),
+    device: str = typer.Option("cuda"),
+    fold: int = typer.Option(0),
+    phase: str | None = typer.Option(
+        None,
+        help="Optional phase filter when the manifest contains multiple phases.",
+    ),
+    override_existing_predictions: bool = typer.Option(False),
+) -> None:
+    from radiogenpdac.ingestion import build_hybrid_structure_manifest_from_model_predictions
+
+    summary = build_hybrid_structure_manifest_from_model_predictions(
+        phase_manifest_csv=phase_manifest,
+        output_manifest_csv=output_manifest,
+        output_mask_dir=output_mask_dir,
+        pdac_root=pdac_root,
+        nnunet_raw_dir=nnunet_raw_dir,
+        nnunet_preprocessed_dir=nnunet_preprocessed_dir,
+        nnunet_results_dir=nnunet_results_dir,
+        model_training_output_dir=model_training_output_dir,
+        structure_name=structure_name,
+        prediction_label=prediction_label,
+        checkpoint_name=checkpoint_name,
+        device=device,
+        fold=fold,
+        phase=phase,
+        override_existing_predictions=override_existing_predictions,
+    )
+    console.print(
+        f"[green]Built hybrid {structure_name} manifest from baseline model predictions.[/green] "
+        f"Manifest={summary['hybrid_manifest_csv']} "
+        f"Overrides={summary['override_manifest_csv']}"
     )
 
 
@@ -731,7 +802,10 @@ def run_phase_finetune_workflow_command(
     gpu_memory_target_gb: float = typer.Option(8.0),
     num_processes: int = typer.Option(4),
     overwrite_target_spacing: str | None = typer.Option(None),
-    structure_priority: str = typer.Option("pancreas,artery,vein,cyst,tumor"),
+    structure_priority: str = typer.Option(
+        "pancreas,artery,vein,tumor,cbd,duct,cyst",
+        help="Comma-separated overwrite order for multiclass labels. Later structures overwrite earlier ones.",
+    ),
     label_map_json: str | None = typer.Option(None),
     checkpoint_name: str = typer.Option("checkpoint_final.pth"),
     source_plans_identifier: str | None = typer.Option(

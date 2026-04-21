@@ -459,17 +459,29 @@ radiogenpdac prepare-ingested-encoder-dataset \
   --crop-mode pancreas_roi
 ```
 
-The default class priority is:
+The default multiclass overwrite order is:
 
 - `pancreas`
 - `artery`
 - `vein`
-- `cyst`
 - `tumor`
+- `cbd`
+- `duct`
+- `cyst`
 
-with tumor written last so it wins on overlaps.
+Later structures overwrite earlier ones, so thin nested structures such as `cbd` and `duct` are preserved instead of being swallowed by pancreas.
 
-`duct` and `cbd` are intentionally not part of the default class priority because partial or visibility-dependent annotations are easy to misinterpret as background during fine-tuning. If you later curate consistently labeled subsets, you can opt them in explicitly with `--structure-priority pancreas,cbd,artery,vein,duct,cyst,tumor`.
+The default class IDs are also aligned with the original `Dataset107_PDAC_Detection` checkpoint for all shared structures:
+
+- `1 tumor`
+- `2 vein`
+- `3 artery`
+- `4 pancreas`
+- `5 duct`
+- `6 cbd`
+- `7 cyst`
+
+This keeps fine-tuning semantics consistent with the pretrained model and makes structure-specific evaluation easier to interpret.
 
 If you explicitly want a tumor-only comparison arm, override the default:
 
@@ -645,6 +657,34 @@ cd /path/to/project_root/RadiogenPDAC
 sbatch scripts/slurm/venous_full_fold0_baseline.sbatch
 ```
 
+If your manual artery labels are narrower or less complete than the original `Dataset107` artery concept, you can build a hybrid artery manifest before fine-tuning. This uses the baseline nnU-Net model to predict artery masks on the same manifest, extracts the artery label, unions those masks with the manual `artery_mask`, and writes a ready-to-train hybrid manifest.
+
+Why this helps:
+
+- the baseline model often retains a broader major-vessel prior, including aorta coverage that newer manual labels may omit
+- manual labels can still add smaller branches or locally corrected vessel anatomy
+- using a single hybrid `artery` class is easier to train and evaluate than splitting “old artery” and “new artery” into different labels
+
+Example:
+
+```bash
+radiogenpdac build-hybrid-structure-manifest-from-model \
+  --phase-manifest ../data/manifests/venous_full/venous_training_manifest.csv \
+  --output-manifest ../data/manifests/venous_full/venous_training_manifest.hybrid.csv \
+  --output-mask-dir ../data/manifests/venous_full/hybrid_artery_masks \
+  --pdac-root PDAC_Detection \
+  --nnunet-raw-dir /path/to/nnUNet_raw \
+  --nnunet-preprocessed-dir /path/to/nnUNet_preprocessed \
+  --nnunet-results-dir /path/to/nnUNet_results \
+  --model-training-output-dir /path/to/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainerCELossLesionSplit__nnUNetPlans_v3__3d_fullres \
+  --structure-name artery \
+  --prediction-label 3 \
+  --phase venous \
+  --fold 0
+```
+
+Then point `prepare-ingested-encoder-dataset` at the hybrid manifest instead of the raw manual one.
+
 To keep checking tumor metrics during a long training run, there is also a helper script at [scripts/slurm/submit_eval_every_n_epochs.sh](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/submit_eval_every_n_epochs.sh). It polls `training_monitor.csv` and submits a separate `evaluate-encoder-model` SLURM job every `N` epochs.
 
 If you want to re-run the prep stage from scratch for the same workflow directory, delete:
@@ -748,13 +788,14 @@ That keeps the anatomy context while still letting the downstream radiogenomic m
 No, not always.
 
 - If your immediate goal is a stronger tumor encoder and annotations are sparse, tumor masks alone are enough for a tumor-only fine-tune.
-- If you want the fine-tuned segmentation model to keep outputting pancreas, artery, vein, or CBD reliably, you should fine-tune as a multi-class task with those structures included in the label map. I would only add CBD or duct to the default training labels once their annotations are consistently present, not merely present when visible.
+- If you want the fine-tuned segmentation model to keep outputting pancreas, artery, vein, CBD, or duct reliably, you should fine-tune as a multi-class task with those structures included in the label map. The current ingestion pipeline keeps `cbd` and `duct` when they are present in the manifest and preserves them during overlap resolution.
 
 ## How to reduce forgetting of other structures
 
 The safest options are:
 
 - Fine-tune on a multi-class labelmap that includes the structures you care about.
+- For artery specifically, prefer a hybrid target that unions stronger baseline-model artery masks with newer manual artery annotations when the manual set is known to be incomplete.
 - Keep tumor as its own class instead of inflating the tumor mask to cover context.
 - Use a lower learning rate and shorter fine-tuning schedule when adapting from the original checkpoint.
 - Mix in original-style training cases if you have access to them, especially if some structures are rare in your new data.

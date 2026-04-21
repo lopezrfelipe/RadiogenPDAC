@@ -23,15 +23,28 @@ DEFAULT_STRUCTURE_PATTERNS: dict[str, list[str]] = {
     "cyst": ["mask_pancreatic_cyst"],
 }
 
+# Match the original Dataset107 PDAC_Detection class order for shared structures so
+# fine-tune datasets stay semantically aligned with the pretrained model outputs:
+# background=0, tumor=1, vein=2, artery=3, pancreas=4, duct=5, cbd=6.
 DEFAULT_LABEL_MAP: dict[str, int] = {
-    "pancreas": 1,
-    "tumor": 2,
-    "cbd": 3,
-    "artery": 4,
-    "vein": 5,
-    "duct": 6,
+    "tumor": 1,
+    "vein": 2,
+    "artery": 3,
+    "pancreas": 4,
+    "duct": 5,
+    "cbd": 6,
     "cyst": 7,
 }
+
+DEFAULT_MULTICLASS_STRUCTURE_PRIORITY: list[str] = [
+    "pancreas",
+    "artery",
+    "vein",
+    "tumor",
+    "cbd",
+    "duct",
+    "cyst",
+]
 
 
 def _build_contiguous_dataset_labels(
@@ -46,6 +59,35 @@ def _build_contiguous_dataset_labels(
     for label_value, structure in enumerate([*active, *extras], start=1):
         dataset_labels[structure] = label_value
     return dataset_labels
+
+
+def _normalize_structure_priority(
+    structures: list[str],
+    preferred_order: list[str] | None = None,
+) -> list[str]:
+    ordered_structures = preferred_order or DEFAULT_MULTICLASS_STRUCTURE_PRIORITY
+    normalized: list[str] = []
+    for structure in ordered_structures:
+        if structure in structures and structure not in normalized:
+            normalized.append(structure)
+    for structure in structures:
+        if structure not in normalized:
+            normalized.append(structure)
+    return normalized
+
+
+def _infer_present_structures(
+    frame: pd.DataFrame,
+    candidate_structures: list[str],
+) -> list[str]:
+    present: list[str] = []
+    for structure in candidate_structures:
+        column = f"{structure}_mask"
+        if column not in frame.columns:
+            continue
+        if frame[column].map(lambda value: not _is_missing(value)).any():
+            present.append(structure)
+    return present
 
 
 def _is_missing(value: Any) -> bool:
@@ -518,7 +560,14 @@ def prepare_phase_finetune_dataset_from_ingestion(
         dataset_labels = {"background": 0, "tumor": 1}
         effective_label_map = {"tumor": 1}
     else:
-        structure_priority = structure_priority or ["pancreas", "artery", "vein", "cyst", "tumor"]
+        requested_structures = (
+            [structure for structure in structure_priority if structure in label_values]
+            if structure_priority is not None
+            else _infer_present_structures(phase_frame, list(label_values.keys()))
+        )
+        if "tumor" in label_values and "tumor" not in requested_structures:
+            requested_structures.append("tumor")
+        structure_priority = _normalize_structure_priority(requested_structures)
         active_structures = [structure for structure in structure_priority if structure in label_values]
         preferred_label_order = [name for name, _ in sorted(label_values.items(), key=lambda item: int(item[1]))]
         dataset_labels = _build_contiguous_dataset_labels(active_structures, preferred_order=preferred_label_order)
@@ -581,6 +630,7 @@ def prepare_phase_finetune_dataset_from_ingestion(
         record["prepared_label_path"] = str(label_dest)
         record["tumor_label"] = int(effective_label_map["tumor"])
         record["structure_labels_json"] = json.dumps(dataset_labels)
+        record["structure_priority_json"] = json.dumps(structure_priority)
         record["voxel_counts_json"] = json.dumps(voxel_counts)
         record["crop_mode"] = crop_mode
         record["crop_margin_mm_json"] = json.dumps(crop_margin_mm)
@@ -789,6 +839,152 @@ def evaluate_encoder_model_on_split(
         prediction_tumor_label=prediction_tumor_label,
         output_json=output_dir / "tumor_metrics.json",
     )
+
+
+def _build_prediction_case_id(row: pd.Series, fallback_index: int) -> str:
+    patient_id = str(row.get("patient_id", "")).strip()
+    phase = str(row.get("phase", "")).strip().lower()
+    if patient_id and phase:
+        return f"{patient_id}_{phase}".replace(" ", "_")
+    if patient_id:
+        return patient_id.replace(" ", "_")
+    image_path = row.get("image_path")
+    if not _is_missing(image_path):
+        return _normalize_filename(Path(str(image_path)).name)
+    return f"case_{fallback_index:04d}"
+
+
+def build_hybrid_structure_manifest_from_model_predictions(
+    phase_manifest_csv: str | Path,
+    output_manifest_csv: str | Path,
+    output_mask_dir: str | Path,
+    pdac_root: str | Path,
+    nnunet_raw_dir: str | Path,
+    nnunet_preprocessed_dir: str | Path,
+    nnunet_results_dir: str | Path,
+    model_training_output_dir: str | Path,
+    structure_name: str = "artery",
+    prediction_label: int = 3,
+    checkpoint_name: str = "checkpoint_final.pth",
+    device: str = "cuda",
+    fold: int = 0,
+    phase: str | None = None,
+    override_existing_predictions: bool = False,
+) -> dict[str, Any]:
+    from radiogenpdac.manifests import build_hybrid_structure_manifest
+
+    _bootstrap_pdac_detection(
+        pdac_root=pdac_root,
+        nnunet_raw_dir=nnunet_raw_dir,
+        nnunet_preprocessed_dir=nnunet_preprocessed_dir,
+        nnunet_results_dir=nnunet_results_dir,
+    )
+
+    import SimpleITK as sitk
+    import torch
+    from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
+
+    manifest_path = Path(phase_manifest_csv).expanduser().resolve()
+    manifest_frame = pd.read_csv(manifest_path)
+    if phase is not None and "phase" in manifest_frame.columns:
+        manifest_frame = manifest_frame.loc[
+            manifest_frame["phase"].astype(str).str.lower() == phase.strip().lower()
+        ].reset_index(drop=True)
+    if manifest_frame.empty:
+        raise ValueError(f"No rows available for structure-mask prediction in {manifest_path}")
+    if "image_path" not in manifest_frame.columns:
+        raise ValueError(f"{manifest_path} must contain an image_path column")
+
+    output_root = Path(output_mask_dir).expanduser().resolve()
+    predictions_dir = output_root / "baseline_segmentation_predictions"
+    structure_dir = output_root / f"{structure_name}_from_model"
+    predictions_dir.mkdir(parents=True, exist_ok=True)
+    structure_dir.mkdir(parents=True, exist_ok=True)
+
+    predictor = nnUNetPredictor(
+        device=torch.device(device),
+        perform_everything_on_gpu=device == "cuda",
+        verbose=False,
+        verbose_preprocessing=False,
+        allow_tqdm=True,
+    )
+    predictor.initialize_from_trained_model_folder(
+        model_training_output_dir=str(Path(model_training_output_dir).expanduser().resolve()),
+        use_folds=(fold,),
+        checkpoint_name=checkpoint_name,
+    )
+
+    input_lists: list[list[str]] = []
+    output_files: list[str] = []
+    case_ids: list[str] = []
+    for index, row in manifest_frame.iterrows():
+        image_path = Path(str(row["image_path"])).expanduser().resolve()
+        if not image_path.exists():
+            raise FileNotFoundError(image_path)
+        case_id = _build_prediction_case_id(row, fallback_index=index)
+        case_ids.append(case_id)
+        input_lists.append([str(image_path)])
+        output_files.append(str((predictions_dir / case_id).resolve()))
+
+    predictor.predict_from_files(
+        list_of_lists_or_source_folder=input_lists,
+        output_folder_or_list_of_truncated_output_files=output_files,
+        save_probabilities=False,
+        overwrite=override_existing_predictions,
+        num_processes_preprocessing=1,
+        num_processes_segmentation_export=1,
+    )
+
+    override_rows: list[dict[str, Any]] = []
+    for row, case_id in zip(manifest_frame.to_dict(orient="records"), case_ids, strict=True):
+        prediction_path = predictions_dir / f"{case_id}.nii.gz"
+        if not prediction_path.exists():
+            raise FileNotFoundError(prediction_path)
+
+        prediction_image = sitk.ReadImage(str(prediction_path))
+        prediction_array = sitk.GetArrayFromImage(prediction_image)
+        binary_mask = (prediction_array == int(prediction_label)).astype(np.uint8)
+
+        mask_path = structure_dir / f"{case_id}_{structure_name}.nii.gz"
+        mask_image = sitk.GetImageFromArray(binary_mask)
+        mask_image.CopyInformation(prediction_image)
+        sitk.WriteImage(mask_image, str(mask_path), useCompression=True)
+
+        override_rows.append(
+            {
+                "patient_id": str(row.get("patient_id", "")).strip(),
+                "phase": str(row.get("phase", phase or "")).strip().lower(),
+                f"{structure_name}_mask": str(mask_path),
+            }
+        )
+
+    override_manifest_path = output_root / f"{structure_name}_override_manifest.csv"
+    override_frame = pd.DataFrame(override_rows)
+    override_frame.to_csv(override_manifest_path, index=False)
+
+    hybrid = build_hybrid_structure_manifest(
+        base_manifest_path=manifest_path,
+        override_manifest_path=override_manifest_path,
+        output_manifest_path=Path(output_manifest_csv).expanduser().resolve(),
+        output_mask_dir=output_root / "hybrid_masks",
+        structures=[structure_name],
+        join_keys=["patient_id", "phase"],
+    )
+
+    summary = {
+        "num_cases": int(len(hybrid)),
+        "structure_name": structure_name,
+        "prediction_label": int(prediction_label),
+        "override_manifest_csv": str(override_manifest_path),
+        "hybrid_manifest_csv": str(Path(output_manifest_csv).expanduser().resolve()),
+        "predictions_dir": str(predictions_dir),
+        "predicted_structure_mask_dir": str(structure_dir),
+        "hybrid_mask_dir": str((output_root / "hybrid_masks" / structure_name).resolve()),
+    }
+    summary_path = output_root / f"{structure_name}_hybrid_manifest_summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    summary["summary_json"] = str(summary_path)
+    return summary
 
 
 def _read_tumor_label_from_index(prepared_index_csv: str | Path) -> int:
