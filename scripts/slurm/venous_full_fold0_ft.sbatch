@@ -30,7 +30,7 @@
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=96G
 #SBATCH --time=48:00:00
@@ -101,4 +101,4 @@ radiogenpdac finetune-encoder \
   --trainer-name "${TRAINER_NAME}" \
   --plans-identifier "${PLANS_IDENTIFIER}" \
   --device cuda \
-  --num-gpus 2
+  --num-gpus 1
