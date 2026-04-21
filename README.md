@@ -664,6 +664,8 @@ Why this helps:
 - the baseline model often retains a broader major-vessel prior, including aorta coverage that newer manual labels may omit
 - manual labels can still add smaller branches or locally corrected vessel anatomy
 - using a single hybrid `artery` class is easier to train and evaluate than splitting “old artery” and “new artery” into different labels
+- the helper now defaults to case-level progress messages because nnU-Net tile-level progress bars are per sliding-window patch, not per patient, and can be misleading during long runs
+- if you have multiple GPUs available, the same helper can shard the manifest across them with repeated `--gpu-id` flags to reduce baseline-mask generation time before training
 
 Example:
 
@@ -682,6 +684,28 @@ radiogenpdac build-hybrid-structure-manifest-from-model \
   --phase venous \
   --fold 0
 ```
+
+To shard prediction across multiple GPUs while keeping readable case-level output:
+
+```bash
+radiogenpdac build-hybrid-structure-manifest-from-model \
+  --phase-manifest ../data/manifests/venous_full/venous_training_manifest.csv \
+  --output-manifest ../data/manifests/venous_full/venous_training_manifest.hybrid.csv \
+  --output-mask-dir ../data/manifests/venous_full/hybrid_artery_masks \
+  --pdac-root PDAC_Detection \
+  --nnunet-raw-dir /path/to/nnUNet_raw \
+  --nnunet-preprocessed-dir /path/to/nnUNet_preprocessed \
+  --nnunet-results-dir /path/to/nnUNet_results \
+  --model-training-output-dir /path/to/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainerCELossLesionSplit__nnUNetPlans_v3__3d_fullres \
+  --structure-name artery \
+  --prediction-label 3 \
+  --phase venous \
+  --fold 0 \
+  --gpu-id 0 \
+  --gpu-id 1
+```
+
+Use `--show-tile-progress` only if you explicitly want nnU-Net's sliding-window patch bars for each case.
 
 Then point `prepare-ingested-encoder-dataset` at the hybrid manifest instead of the raw manual one.
 

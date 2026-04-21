@@ -658,11 +658,24 @@ def build_hybrid_structure_manifest_from_model_command(
     checkpoint_name: str = typer.Option("checkpoint_final.pth"),
     device: str = typer.Option("cuda"),
     fold: int = typer.Option(0),
+    gpu_ids: list[int] | None = typer.Option(
+        None,
+        "--gpu-id",
+        help="Optional GPU ids for parallel baseline inference. Repeat the flag to shard across multiple GPUs.",
+    ),
     phase: str | None = typer.Option(
         None,
         help="Optional phase filter when the manifest contains multiple phases.",
     ),
     override_existing_predictions: bool = typer.Option(False),
+    show_case_progress: bool = typer.Option(
+        True,
+        help="Print one clear progress line per case.",
+    ),
+    show_tile_progress: bool = typer.Option(
+        False,
+        help="Show nnU-Net sliding-window tile progress bars for each case.",
+    ),
 ) -> None:
     from radiogenpdac.ingestion import build_hybrid_structure_manifest_from_model_predictions
 
@@ -680,8 +693,11 @@ def build_hybrid_structure_manifest_from_model_command(
         checkpoint_name=checkpoint_name,
         device=device,
         fold=fold,
+        gpu_ids=gpu_ids or None,
         phase=phase,
         override_existing_predictions=override_existing_predictions,
+        show_case_progress=show_case_progress,
+        show_tile_progress=show_tile_progress,
     )
     console.print(
         f"[green]Built hybrid {structure_name} manifest from baseline model predictions.[/green] "
