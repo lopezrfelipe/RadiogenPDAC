@@ -871,9 +871,20 @@ def _predict_structure_masks_worker(
     show_case_progress: bool,
     show_tile_progress: bool,
     worker_label: str,
+    pdac_root: str,
+    nnunet_raw_dir: str,
+    nnunet_preprocessed_dir: str,
+    nnunet_results_dir: str,
 ) -> None:
     if gpu_id is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+
+    _bootstrap_pdac_detection(
+        pdac_root=pdac_root,
+        nnunet_raw_dir=nnunet_raw_dir,
+        nnunet_preprocessed_dir=nnunet_preprocessed_dir,
+        nnunet_results_dir=nnunet_results_dir,
+    )
 
     import SimpleITK as sitk
     import torch
@@ -965,6 +976,16 @@ def build_hybrid_structure_manifest_from_model_predictions(
         nnunet_results_dir=nnunet_results_dir,
     )
 
+    try:
+        import acvl_utils  # noqa: F401
+        from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor  # noqa: F401
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "Could not import nnU-Net inference dependencies. Make sure this command is run "
+            "from the same Python environment used for training (for example after "
+            "`conda activate pdac-ft`)."
+        ) from exc
+
     manifest_path = Path(phase_manifest_csv).expanduser().resolve()
     manifest_frame = pd.read_csv(manifest_path)
     if phase is not None and "phase" in manifest_frame.columns:
@@ -1019,6 +1040,10 @@ def build_hybrid_structure_manifest_from_model_predictions(
                     show_case_progress,
                     show_tile_progress,
                     f"gpu{gpu_id}",
+                    str(Path(pdac_root).expanduser().resolve()),
+                    str(Path(nnunet_raw_dir).expanduser().resolve()),
+                    str(Path(nnunet_preprocessed_dir).expanduser().resolve()),
+                    str(Path(nnunet_results_dir).expanduser().resolve()),
                 ),
             )
             process.start()
@@ -1044,6 +1069,10 @@ def build_hybrid_structure_manifest_from_model_predictions(
             show_case_progress=show_case_progress,
             show_tile_progress=show_tile_progress,
             worker_label="worker0",
+            pdac_root=str(Path(pdac_root).expanduser().resolve()),
+            nnunet_raw_dir=str(Path(nnunet_raw_dir).expanduser().resolve()),
+            nnunet_preprocessed_dir=str(Path(nnunet_preprocessed_dir).expanduser().resolve()),
+            nnunet_results_dir=str(Path(nnunet_results_dir).expanduser().resolve()),
         )
 
     override_rows: list[dict[str, Any]] = []
