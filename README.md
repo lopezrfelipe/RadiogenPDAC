@@ -711,6 +711,8 @@ Then point `prepare-ingested-encoder-dataset` at the hybrid manifest instead of 
 
 If you want to build the hybrid artery manifest as a detached SLURM job on 2 GPUs, use [scripts/slurm/venous_full_hybrid_artery_2gpu.sbatch](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/venous_full_hybrid_artery_2gpu.sbatch). This script forces the explicit `pdac-ft` Python and runs `python -m radiogenpdac.cli` so it does not accidentally pick up a stale global `radiogenpdac` binary from `~/.local/bin`.
 
+Once the hybrid manifest has been converted/preprocessed into a rebuilt dataset such as `Dataset912_PDACVenousFullHybridArtery`, you can fine-tune it with [scripts/slurm/venous_full_hybrid_artery_fold0_ft.sbatch](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/venous_full_hybrid_artery_fold0_ft.sbatch). This training job also uses the explicit `pdac-ft` Python path for the same reason.
+
 To keep checking tumor metrics during a long training run, there is also a helper script at [scripts/slurm/submit_eval_every_n_epochs.sh](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/submit_eval_every_n_epochs.sh). It polls `training_monitor.csv` and submits a separate `evaluate-encoder-model` SLURM job every `N` epochs.
 
 If you want to re-run the prep stage from scratch for the same workflow directory, delete:
