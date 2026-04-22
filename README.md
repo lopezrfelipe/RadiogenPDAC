@@ -715,6 +715,8 @@ Once the hybrid manifest has been converted/preprocessed into a rebuilt dataset 
 
 For a clean arterial adaptation run such as `Dataset913_PDACArterial250`, use [scripts/slurm/arterial_250_fold0_ft.sbatch](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/arterial_250_fold0_ft.sbatch). It follows the same explicit-`pdac-ft` Python pattern to avoid falling back to a stale global CLI.
 
+To compare against the original pretrained model on the same arterial fold before fine-tuning, use [scripts/slurm/arterial_250_fold0_baseline.sbatch](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/arterial_250_fold0_baseline.sbatch). For the corrected multiclass label map used by `Dataset913_PDACArterial250`, both the reference and baseline prediction tumor labels are `1`.
+
 To keep checking tumor metrics during a long training run, there is also a helper script at [scripts/slurm/submit_eval_every_n_epochs.sh](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/submit_eval_every_n_epochs.sh). It polls `training_monitor.csv` and submits a separate `evaluate-encoder-model` SLURM job every `N` epochs.
 
 If you want to re-run the prep stage from scratch for the same workflow directory, delete:
