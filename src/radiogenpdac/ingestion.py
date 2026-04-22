@@ -1089,6 +1089,7 @@ def build_hybrid_structure_manifest_from_model_predictions(
 
         override_rows.append(
             {
+                "image_path": str(row.get("image_path", "")).strip(),
                 "patient_id": str(row.get("patient_id", "")).strip(),
                 "phase": str(row.get("phase", phase or "")).strip().lower(),
                 f"{structure_name}_mask": str(mask_path),
@@ -1105,7 +1106,7 @@ def build_hybrid_structure_manifest_from_model_predictions(
         output_manifest_path=Path(output_manifest_csv).expanduser().resolve(),
         output_mask_dir=output_root / "hybrid_masks",
         structures=[structure_name],
-        join_keys=["patient_id", "phase"],
+        join_keys=["image_path"],
     )
 
     summary = {
