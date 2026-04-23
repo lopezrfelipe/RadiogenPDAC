@@ -685,6 +685,14 @@ def build_hybrid_structure_manifest_from_model_command(
             "Repeat to search multiple directories."
         ),
     ),
+    reuse_only: bool = typer.Option(
+        False,
+        "--reuse-only",
+        help=(
+            "Only copy reusable predictions and write reuse/work summaries, then exit before "
+            "GPU inference or mask extraction."
+        ),
+    ),
     phase: str | None = typer.Option(
         None,
         help="Optional phase filter when the manifest contains multiple phases.",
@@ -737,12 +745,20 @@ def build_hybrid_structure_manifest_from_model_command(
         fold=fold,
         gpu_ids=gpu_ids or None,
         reusable_prediction_dirs=reusable_prediction_dirs or None,
+        reuse_only=reuse_only,
         phase=phase,
         override_existing_predictions=override_existing_predictions,
         show_case_progress=show_case_progress,
         show_tile_progress=show_tile_progress,
     )
     structures = ", ".join(summary["structure_prediction_labels"].keys())
+    if summary.get("reuse_only"):
+        console.print(
+            f"[green]Reuse scan complete for {structures}.[/green] "
+            f"Reuse={summary['reusable_prediction_summary_json']} "
+            f"Plan={summary['prediction_work_summary_json']}"
+        )
+        return
     console.print(
         f"[green]Built hybrid {structures} manifest from one baseline prediction pass.[/green] "
         f"Manifest={summary['hybrid_manifest_csv']} "

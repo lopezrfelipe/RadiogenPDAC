@@ -989,6 +989,36 @@ def _copy_reusable_predictions(
     return summary
 
 
+def _summarize_prediction_work(
+    rows: list[dict[str, Any]],
+    predictions_dir: Path,
+    structure_dirs: dict[str, Path],
+) -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "complete": [],
+        "extract_from_existing_prediction": [],
+        "predict_missing": [],
+    }
+    for row in rows:
+        case_id = str(row["case_id"])
+        prediction_path = predictions_dir / f"{case_id}.nii.gz"
+        mask_paths = [
+            structure_dir / f"{case_id}_{structure_name}.nii.gz"
+            for structure_name, structure_dir in structure_dirs.items()
+        ]
+        if prediction_path.exists() and all(mask_path.exists() for mask_path in mask_paths):
+            summary["complete"].append(case_id)
+        elif prediction_path.exists():
+            summary["extract_from_existing_prediction"].append(case_id)
+        else:
+            summary["predict_missing"].append(case_id)
+
+    summary["num_complete"] = len(summary["complete"])
+    summary["num_extract_from_existing_prediction"] = len(summary["extract_from_existing_prediction"])
+    summary["num_predict_missing"] = len(summary["predict_missing"])
+    return summary
+
+
 def _predict_structure_masks_worker(
     rows: list[dict[str, Any]],
     predictions_dir: str,
@@ -1110,6 +1140,7 @@ def build_hybrid_structure_manifest_from_model_predictions(
     override_existing_predictions: bool = False,
     gpu_ids: list[int] | None = None,
     reusable_prediction_dirs: list[str | Path] | None = None,
+    reuse_only: bool = False,
     show_case_progress: bool = True,
     show_tile_progress: bool = False,
 ) -> dict[str, Any]:
@@ -1194,13 +1225,56 @@ def build_hybrid_structure_manifest_from_model_predictions(
         suffix = "..." if len(reuse_summary["missing"]) > 10 else ""
         print(f"[reuse] first missing cases: {preview}{suffix}")
 
+    work_summary = _summarize_prediction_work(
+        rows=prepared_rows,
+        predictions_dir=predictions_dir,
+        structure_dirs=structure_dirs,
+    )
+    work_summary_path = output_root / "prediction_work_summary.json"
+    work_summary_path.write_text(json.dumps(work_summary, indent=2), encoding="utf-8")
+    print(
+        "[plan] "
+        f"total={len(prepared_rows)} "
+        f"complete_skip={work_summary['num_complete']} "
+        f"extract_from_existing={work_summary['num_extract_from_existing_prediction']} "
+        f"predict_missing={work_summary['num_predict_missing']} "
+        f"summary={work_summary_path}"
+    )
+    if reuse_only:
+        summary = {
+            "num_cases": int(len(prepared_rows)),
+            "structure_prediction_labels": prediction_labels,
+            "hybrid_manifest_csv": str(Path(output_manifest_csv).expanduser().resolve()),
+            "predictions_dir": str(predictions_dir),
+            "reusable_prediction_dirs": reusable_dirs,
+            "reusable_prediction_summary_json": str(reuse_summary_path),
+            "prediction_work_summary_json": str(work_summary_path),
+            "num_reused_predictions": reuse_summary["num_reused"],
+            "num_already_present_predictions": reuse_summary["num_already_present"],
+            "num_missing_reusable_predictions": reuse_summary["num_missing"],
+            "prediction_work_summary": work_summary,
+            "reuse_only": True,
+        }
+        summary_stem = "_".join(prediction_labels.keys())
+        summary_path = output_root / f"{summary_stem}_reuse_only_summary.json"
+        summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        summary["summary_json"] = str(summary_path)
+        return summary
+
+    complete_cases = set(work_summary["complete"])
+    rows_needing_work = [
+        row
+        for row in prepared_rows
+        if str(row["case_id"]) not in complete_cases
+    ]
+
     model_dir = str(Path(model_training_output_dir).expanduser().resolve())
     if gpu_ids:
         if device != "cuda":
             raise ValueError("gpu_ids can only be used when device='cuda'")
         processes: list[mp.Process] = []
         num_workers = len(gpu_ids)
-        chunks = [prepared_rows[i::num_workers] for i in range(num_workers)]
+        chunks = [rows_needing_work[i::num_workers] for i in range(num_workers)]
         for gpu_id, chunk in zip(gpu_ids, chunks, strict=True):
             if not chunk:
                 continue
@@ -1236,7 +1310,7 @@ def build_hybrid_structure_manifest_from_model_predictions(
                 raise RuntimeError(f"Prediction worker exited with code {process.exitcode}")
     else:
         _predict_structure_masks_worker(
-            rows=prepared_rows,
+            rows=rows_needing_work,
             predictions_dir=str(predictions_dir),
             structure_dirs={structure: str(path) for structure, path in structure_dirs.items()},
             prediction_labels=prediction_labels,
@@ -1299,6 +1373,10 @@ def build_hybrid_structure_manifest_from_model_predictions(
         "num_reused_predictions": reuse_summary["num_reused"],
         "num_already_present_predictions": reuse_summary["num_already_present"],
         "num_missing_reusable_predictions": reuse_summary["num_missing"],
+        "prediction_work_summary_json": str(work_summary_path),
+        "prediction_work_summary": {
+            key: value for key, value in work_summary.items() if key.startswith("num_")
+        },
         "predicted_structure_mask_dirs": {
             structure: str(path)
             for structure, path in structure_dirs.items()

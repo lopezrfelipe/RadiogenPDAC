@@ -18,8 +18,10 @@
 #   OUTPUT_MANIFEST=/path/to/arterial_training_manifest.hybrid_vessels.csv
 #   OUTPUT_MASK_DIR=/path/to/hybrid_vessel_masks
 #   STRUCTURE_LABELS=vein:2,artery:3
-#   GPU_IDS=0,1
+#   NUM_GPUS=2
+#   GPU_IDS=0:1
 #   REUSE_PREDICTION_DIRS=/path/to/existing/predictions,/path/to/other/predictions
+#   REUSE_ONLY=false
 #   CHECKPOINT_NAME=checkpoint_final.pth
 #   FOLD=0
 
@@ -47,13 +49,44 @@ PHASE_MANIFEST="${PHASE_MANIFEST:-${DATA_ROOT}/manifests/arterial_250/arterial_t
 OUTPUT_MANIFEST="${OUTPUT_MANIFEST:-${DATA_ROOT}/manifests/arterial_250/arterial_training_manifest.hybrid_vessels.csv}"
 OUTPUT_MASK_DIR="${OUTPUT_MASK_DIR:-${DATA_ROOT}/manifests/arterial_250/hybrid_vessel_masks}"
 STRUCTURE_LABELS="${STRUCTURE_LABELS:-vein:2,artery:3}"
-GPU_IDS="${GPU_IDS:-0,1}"
+NUM_GPUS="${NUM_GPUS:-}"
+GPU_IDS="${GPU_IDS:-}"
 REUSE_PREDICTION_DIRS="${REUSE_PREDICTION_DIRS:-${DATA_ROOT}/manifests/arterial_250/fold_${FOLD:-0}_baseline_eval/predictions}"
+REUSE_ONLY="${REUSE_ONLY:-false}"
 CHECKPOINT_NAME="${CHECKPOINT_NAME:-checkpoint_final.pth}"
 FOLD="${FOLD:-0}"
 MODEL_TRAINING_OUTPUT_DIR="${MODEL_TRAINING_OUTPUT_DIR:-${PANDX_WORKSPACE}/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainerCELossLesionSplit__nnUNetPlans_v3__3d_fullres}"
 PDAC_ROOT="${PDAC_ROOT:-${PROJECT_ROOT}/PDAC_Detection}"
 PYTHON_BIN="${PYTHON_BIN:-/home/felipe/.conda/envs/${CONDA_ENV_NAME}/bin/python}"
+
+if [[ -n "${NUM_GPUS}" ]]; then
+  if ! [[ "${NUM_GPUS}" =~ ^[0-9]+$ ]] || [[ "${NUM_GPUS}" -lt 1 ]]; then
+    echo "NUM_GPUS must be a positive integer, got: ${NUM_GPUS}"
+    exit 1
+  fi
+  GPU_IDS=""
+  for ((gpu_index=0; gpu_index<NUM_GPUS; gpu_index++)); do
+    if [[ -n "${GPU_IDS}" ]]; then
+      GPU_IDS+=","
+    fi
+    GPU_IDS+="${gpu_index}"
+  done
+elif [[ -z "${GPU_IDS}" ]]; then
+  if [[ -n "${SLURM_GPUS_ON_NODE:-}" && "${SLURM_GPUS_ON_NODE}" =~ ^[0-9]+$ ]]; then
+    GPU_IDS=""
+    for ((gpu_index=0; gpu_index<SLURM_GPUS_ON_NODE; gpu_index++)); do
+      if [[ -n "${GPU_IDS}" ]]; then
+        GPU_IDS+=","
+      fi
+      GPU_IDS+="${gpu_index}"
+    done
+  elif [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]]; then
+    GPU_IDS="${CUDA_VISIBLE_DEVICES}"
+  else
+    GPU_IDS="0,1"
+  fi
+fi
+GPU_IDS="${GPU_IDS//:/,}"
 
 mkdir -p "${PROJECT_ROOT}/logs"
 
@@ -88,8 +121,13 @@ echo "PHASE_MANIFEST=${PHASE_MANIFEST}"
 echo "OUTPUT_MANIFEST=${OUTPUT_MANIFEST}"
 echo "OUTPUT_MASK_DIR=${OUTPUT_MASK_DIR}"
 echo "STRUCTURE_LABELS=${STRUCTURE_LABELS}"
+echo "NUM_GPUS=${NUM_GPUS}"
 echo "GPU_IDS=${GPU_IDS}"
+echo "SLURM_GPUS_ON_NODE=${SLURM_GPUS_ON_NODE:-}"
+echo "SLURM_JOB_GPUS=${SLURM_JOB_GPUS:-}"
+echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-}"
 echo "REUSE_PREDICTION_DIRS=${REUSE_PREDICTION_DIRS}"
+echo "REUSE_ONLY=${REUSE_ONLY}"
 
 "${PYTHON_BIN}" -V
 "${PYTHON_BIN}" -c "import acvl_utils; print('acvl_utils ok:', acvl_utils.__file__)"
@@ -103,8 +141,11 @@ done
 GPU_ID_ARGS=()
 IFS=',' read -r -a GPU_ID_ITEMS <<< "${GPU_IDS}"
 for item in "${GPU_ID_ITEMS[@]}"; do
-  GPU_ID_ARGS+=(--gpu-id "${item}")
+  if [[ -n "${item}" ]]; then
+    GPU_ID_ARGS+=(--gpu-id "${item}")
+  fi
 done
+echo "PARSED_GPU_IDS=${GPU_ID_ARGS[*]}"
 
 REUSE_PREDICTION_ARGS=()
 IFS=',' read -r -a REUSE_PREDICTION_ITEMS <<< "${REUSE_PREDICTION_DIRS}"
@@ -115,6 +156,13 @@ for item in "${REUSE_PREDICTION_ITEMS[@]}"; do
     echo "Skipping missing reusable prediction dir: ${item}"
   fi
 done
+
+REUSE_ONLY_ARGS=()
+case "${REUSE_ONLY}" in
+  true|True|TRUE|1|yes|Yes|YES)
+    REUSE_ONLY_ARGS+=(--reuse-only)
+    ;;
+esac
 
 "${PYTHON_BIN}" -m radiogenpdac.cli \
   build-hybrid-structure-manifest-from-model \
@@ -128,6 +176,7 @@ done
   --model-training-output-dir "${MODEL_TRAINING_OUTPUT_DIR}" \
   "${STRUCTURE_LABEL_ARGS[@]}" \
   "${REUSE_PREDICTION_ARGS[@]}" \
+  "${REUSE_ONLY_ARGS[@]}" \
   --checkpoint-name "${CHECKPOINT_NAME}" \
   --phase arterial \
   --fold "${FOLD}" \
