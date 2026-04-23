@@ -717,6 +717,27 @@ For a clean arterial adaptation run such as `Dataset913_PDACArterial250`, use [s
 
 To compare against the original pretrained model on the same arterial fold before fine-tuning, use [scripts/slurm/arterial_250_fold0_baseline.sbatch](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/arterial_250_fold0_baseline.sbatch). For the corrected multiclass label map used by `Dataset913_PDACArterial250`, both the reference and baseline prediction tumor labels are `1`.
 
+If you want one reusable evaluation job instead of separate arterial/venous scripts, use [scripts/slurm/phase_eval.sbatch](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/phase_eval.sbatch). It accepts `PHASE=arterial|venous`, `EVAL_TARGET=baseline|best|latest|last|final`, and `FOLD=<n>` at submit time, but it now requires you to pass the exact dataset and tumor labels explicitly:
+
+```bash
+PHASE=arterial EVAL_TARGET=baseline DATASET_ID=913 DATASET_NAME=PDACArterial250 \
+FOLD=0 REFERENCE_TUMOR_LABEL=1 PREDICTION_TUMOR_LABEL=1 \
+sbatch scripts/slurm/phase_eval.sbatch
+
+PHASE=venous EVAL_TARGET=best DATASET_ID=912 DATASET_NAME=PDACVenousFullHybridArtery \
+FOLD=0 REFERENCE_TUMOR_LABEL=1 PREDICTION_TUMOR_LABEL=1 PLANS_IDENTIFIER=nnUNetPlans_v3 \
+sbatch scripts/slurm/phase_eval.sbatch
+```
+
+For the older full-venous baseline on `Dataset911_PDACVenousFull`, pass the legacy tumor labels explicitly:
+
+```bash
+PHASE=venous EVAL_TARGET=baseline DATASET_ID=911 DATASET_NAME=PDACVenousFull \
+REFERENCE_TUMOR_LABEL=2 PREDICTION_TUMOR_LABEL=1 \
+OUTPUT_DIR=/home/felipe/Documents/PDACRadiogenom/data/manifests/venous_full/fold_0_baseline_eval \
+sbatch scripts/slurm/phase_eval.sbatch
+```
+
 To keep checking tumor metrics during a long training run, there is also a helper script at [scripts/slurm/submit_eval_every_n_epochs.sh](/Users/felipe/Documents/Playground/RadiogenPDAC/scripts/slurm/submit_eval_every_n_epochs.sh). It polls `training_monitor.csv` and submits a separate `evaluate-encoder-model` SLURM job every `N` epochs.
 
 If you want to re-run the prep stage from scratch for the same workflow directory, delete:
