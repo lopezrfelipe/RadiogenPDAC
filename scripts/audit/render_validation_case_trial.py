@@ -93,12 +93,39 @@ def _display_normalized(slice_yx: np.ndarray, lower: float, upper: float) -> np.
     return ((clipped - lower) / max(upper - lower, 1e-6)).astype(np.float32)
 
 
+def _crop_mask_around_center(mask_yx: np.ndarray, center_yx: tuple[int, int], crop_size: int, tumor_label: int) -> np.ndarray:
+    return (_crop_around_center(mask_yx.astype(np.float32), center_yx, crop_size) == float(tumor_label)).astype(bool)
+
+
+def _outline_mask(mask_yx: np.ndarray) -> np.ndarray:
+    mask = mask_yx.astype(bool)
+    up = np.zeros_like(mask)
+    down = np.zeros_like(mask)
+    left = np.zeros_like(mask)
+    right = np.zeros_like(mask)
+    up[1:, :] = mask[:-1, :]
+    down[:-1, :] = mask[1:, :]
+    left[:, 1:] = mask[:, :-1]
+    right[:, :-1] = mask[:, 1:]
+    interior = mask & up & down & left & right
+    return mask & (~interior)
+
+
+def _overlay_outline(base_yx: np.ndarray, outline_yx: np.ndarray, color: tuple[float, float, float] = (1.0, 0.2, 0.2)) -> np.ndarray:
+    base_rgb = np.stack([base_yx, base_yx, base_yx], axis=-1).astype(np.float32)
+    base_rgb[outline_yx] = np.asarray(color, dtype=np.float32)
+    return base_rgb
+
+
 def _render_png(
     output_png: Path,
     case_id: str,
-    raw_crop: np.ndarray,
+    raw_primary_crop: np.ndarray,
+    raw_secondary_crop: np.ndarray,
     normalized_crop: np.ndarray,
-    raw_window: tuple[float, float],
+    overlay_crop: np.ndarray,
+    raw_primary_window: tuple[float, float],
+    raw_secondary_window: tuple[float, float],
     normalized_range: tuple[float, float],
 ) -> None:
     try:
@@ -109,14 +136,18 @@ def _render_png(
     except ImportError as exc:  # pragma: no cover - environment dependent
         raise RuntimeError("matplotlib is required to render audit PNGs") from exc
 
-    figure, axes = plt.subplots(1, 2, figsize=(10, 5), dpi=180)
-    axes[0].imshow(raw_crop, cmap="gray", vmin=0.0, vmax=1.0)
-    axes[0].set_title(f"Raw windowed\nHU [{raw_window[0]:.0f}, {raw_window[1]:.0f}]")
-    axes[1].imshow(normalized_crop, cmap="gray", vmin=0.0, vmax=1.0)
-    axes[1].set_title(
+    figure, axes = plt.subplots(1, 4, figsize=(18, 5), dpi=180)
+    axes[0].imshow(raw_primary_crop, cmap="gray", vmin=0.0, vmax=1.0)
+    axes[0].set_title(f"Raw window A\nHU [{raw_primary_window[0]:.0f}, {raw_primary_window[1]:.0f}]")
+    axes[1].imshow(raw_secondary_crop, cmap="gray", vmin=0.0, vmax=1.0)
+    axes[1].set_title(f"Raw window B\nHU [{raw_secondary_window[0]:.0f}, {raw_secondary_window[1]:.0f}]")
+    axes[2].imshow(normalized_crop, cmap="gray", vmin=0.0, vmax=1.0)
+    axes[2].set_title(
         "nnU-Net normalized\n"
         f"display [{normalized_range[0]:.1f}, {normalized_range[1]:.1f}]"
     )
+    axes[3].imshow(overlay_crop, vmin=0.0, vmax=1.0)
+    axes[3].set_title("Raw window A + GT outline")
     for axis in axes:
         axis.axis("off")
     figure.suptitle(case_id, fontsize=11)
@@ -129,8 +160,8 @@ def _render_png(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Render a trial PNG for one validation case showing raw-windowed and "
-            "nnU-Net-normalized axial crops centered on the tumor."
+            "Render axial audit PNGs for validation cases showing raw-windowed, "
+            "nnU-Net-normalized, and GT-outline views centered on the tumor."
         )
     )
     parser.add_argument("--nnunet-raw-dir", type=Path, required=True)
@@ -141,33 +172,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--configuration", type=str, default="3d_fullres")
     parser.add_argument("--tumor-label", type=int, default=1)
     parser.add_argument("--case-id", type=str, default=None)
+    parser.add_argument("--all-cases", action="store_true", help="Render every case in the validation split.")
     parser.add_argument("--crop-size", type=int, default=160)
     parser.add_argument("--raw-window", type=float, nargs=2, default=(-100.0, 240.0))
+    parser.add_argument("--raw-window-secondary", type=float, nargs=2, default=(-150.0, 300.0))
     parser.add_argument("--normalized-display-range", type=float, nargs=2, default=(-2.5, 2.5))
     parser.add_argument("--output-dir", type=Path, required=True)
     return parser
 
 
-def main() -> None:
-    args = build_parser().parse_args()
-
-    dataset_dir = args.nnunet_raw_dir.expanduser().resolve() / f"Dataset{args.dataset_id:03d}_{args.dataset_name}"
-    preprocessed_dataset_dir = (
-        args.nnunet_preprocessed_dir.expanduser().resolve() / f"Dataset{args.dataset_id:03d}_{args.dataset_name}"
-    )
-    splits_json = preprocessed_dataset_dir / "splits_final.json"
-    preprocessed_config_dir = preprocessed_dataset_dir / args.configuration
-
-    if not splits_json.exists():
-        raise FileNotFoundError(splits_json)
-    if not preprocessed_config_dir.exists():
-        raise FileNotFoundError(preprocessed_config_dir)
-
-    validation_case_ids = _load_validation_case_ids(splits_json, args.fold)
-    case_id = args.case_id or validation_case_ids[0]
-    if case_id not in validation_case_ids:
-        raise ValueError(f"Case {case_id} is not in validation fold {args.fold}")
-
+def _render_case(case_id: str, args: argparse.Namespace, dataset_dir: Path, preprocessed_config_dir: Path, output_dir: Path) -> Path:
     raw_image_path = dataset_dir / "imagesTr" / f"{case_id}_0000.nii.gz"
     raw_label_path = dataset_dir / "labelsTr" / f"{case_id}.nii.gz"
     preprocessed_case_path = preprocessed_config_dir / f"{case_id}.npz"
@@ -187,7 +201,15 @@ def main() -> None:
     raw_slice_index = _find_largest_tumor_slice(raw_label_zyx, args.tumor_label)
     raw_center = _center_from_slice(raw_label_zyx[raw_slice_index], args.tumor_label)
     raw_crop = _crop_around_center(raw_image_zyx[raw_slice_index], raw_center, args.crop_size)
-    raw_display = _window_raw(raw_crop, args.raw_window[0], args.raw_window[1])
+    raw_display_primary = _window_raw(raw_crop, args.raw_window[0], args.raw_window[1])
+    raw_display_secondary = _window_raw(
+        raw_crop,
+        args.raw_window_secondary[0],
+        args.raw_window_secondary[1],
+    )
+    raw_mask_crop = _crop_mask_around_center(raw_label_zyx[raw_slice_index], raw_center, args.crop_size, args.tumor_label)
+    raw_outline = _outline_mask(raw_mask_crop)
+    overlay_display = _overlay_outline(raw_display_primary, raw_outline)
 
     preprocessed_data, preprocessed_seg = _load_preprocessed_case(preprocessed_case_path)
     normalized_image_zyx = preprocessed_data[0]
@@ -205,19 +227,59 @@ def main() -> None:
         args.normalized_display_range[1],
     )
 
-    output_png = args.output_dir.expanduser().resolve() / f"{case_id}.png"
+    output_png = output_dir / f"{case_id}.png"
     _render_png(
         output_png=output_png,
         case_id=case_id,
-        raw_crop=raw_display,
+        raw_primary_crop=raw_display_primary,
+        raw_secondary_crop=raw_display_secondary,
         normalized_crop=normalized_display,
-        raw_window=(float(args.raw_window[0]), float(args.raw_window[1])),
+        overlay_crop=overlay_display,
+        raw_primary_window=(float(args.raw_window[0]), float(args.raw_window[1])),
+        raw_secondary_window=(
+            float(args.raw_window_secondary[0]),
+            float(args.raw_window_secondary[1]),
+        ),
         normalized_range=(
             float(args.normalized_display_range[0]),
             float(args.normalized_display_range[1]),
         ),
     )
-    print(output_png)
+    return output_png
+
+
+def main() -> None:
+    args = build_parser().parse_args()
+
+    dataset_dir = args.nnunet_raw_dir.expanduser().resolve() / f"Dataset{args.dataset_id:03d}_{args.dataset_name}"
+    preprocessed_dataset_dir = (
+        args.nnunet_preprocessed_dir.expanduser().resolve() / f"Dataset{args.dataset_id:03d}_{args.dataset_name}"
+    )
+    splits_json = preprocessed_dataset_dir / "splits_final.json"
+    preprocessed_config_dir = preprocessed_dataset_dir / args.configuration
+
+    if not splits_json.exists():
+        raise FileNotFoundError(splits_json)
+    if not preprocessed_config_dir.exists():
+        raise FileNotFoundError(preprocessed_config_dir)
+
+    validation_case_ids = _load_validation_case_ids(splits_json, args.fold)
+    if args.all_cases:
+        selected_case_ids = validation_case_ids
+    else:
+        selected_case_ids = [args.case_id or validation_case_ids[0]]
+
+    for case_id in selected_case_ids:
+        if case_id not in validation_case_ids:
+            raise ValueError(f"Case {case_id} is not in validation fold {args.fold}")
+        output_png = _render_case(
+            case_id=case_id,
+            args=args,
+            dataset_dir=dataset_dir,
+            preprocessed_config_dir=preprocessed_config_dir,
+            output_dir=args.output_dir.expanduser().resolve(),
+        )
+        print(output_png)
 
 
 if __name__ == "__main__":
