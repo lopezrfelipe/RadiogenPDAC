@@ -18,6 +18,7 @@
 #   OUTPUT_MANIFEST=/path/to/venous_training_manifest.hybrid_vessels.csv
 #   OUTPUT_MASK_DIR=/path/to/hybrid_vessel_masks
 #   STRUCTURE_LABELS=vein:2,artery:3
+#   GPU_IDS=0,1
 #   REUSE_PREDICTION_DIRS=/path/to/existing/predictions,/path/to/other/predictions
 #   CHECKPOINT_NAME=checkpoint_final.pth
 #   FOLD=0
@@ -46,6 +47,7 @@ PHASE_MANIFEST="${PHASE_MANIFEST:-${DATA_ROOT}/manifests/venous_full/venous_trai
 OUTPUT_MANIFEST="${OUTPUT_MANIFEST:-${DATA_ROOT}/manifests/venous_full/venous_training_manifest.hybrid_vessels.csv}"
 OUTPUT_MASK_DIR="${OUTPUT_MASK_DIR:-${DATA_ROOT}/manifests/venous_full/hybrid_vessel_masks}"
 STRUCTURE_LABELS="${STRUCTURE_LABELS:-vein:2,artery:3}"
+GPU_IDS="${GPU_IDS:-0,1}"
 REUSE_PREDICTION_DIRS="${REUSE_PREDICTION_DIRS:-${DATA_ROOT}/manifests/venous_full/fold_${FOLD:-0}_baseline_eval/predictions}"
 CHECKPOINT_NAME="${CHECKPOINT_NAME:-checkpoint_final.pth}"
 FOLD="${FOLD:-0}"
@@ -86,6 +88,7 @@ echo "PHASE_MANIFEST=${PHASE_MANIFEST}"
 echo "OUTPUT_MANIFEST=${OUTPUT_MANIFEST}"
 echo "OUTPUT_MASK_DIR=${OUTPUT_MASK_DIR}"
 echo "STRUCTURE_LABELS=${STRUCTURE_LABELS}"
+echo "GPU_IDS=${GPU_IDS}"
 echo "REUSE_PREDICTION_DIRS=${REUSE_PREDICTION_DIRS}"
 
 "${PYTHON_BIN}" -V
@@ -95,6 +98,12 @@ STRUCTURE_LABEL_ARGS=()
 IFS=',' read -r -a STRUCTURE_LABEL_ITEMS <<< "${STRUCTURE_LABELS}"
 for item in "${STRUCTURE_LABEL_ITEMS[@]}"; do
   STRUCTURE_LABEL_ARGS+=(--structure-label "${item}")
+done
+
+GPU_ID_ARGS=()
+IFS=',' read -r -a GPU_ID_ITEMS <<< "${GPU_IDS}"
+for item in "${GPU_ID_ITEMS[@]}"; do
+  GPU_ID_ARGS+=(--gpu-id "${item}")
 done
 
 REUSE_PREDICTION_ARGS=()
@@ -122,5 +131,4 @@ done
   --checkpoint-name "${CHECKPOINT_NAME}" \
   --phase venous \
   --fold "${FOLD}" \
-  --gpu-id 0 \
-  --gpu-id 1
+  "${GPU_ID_ARGS[@]}"

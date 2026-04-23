@@ -903,6 +903,92 @@ def _build_prediction_case_id(row: pd.Series, fallback_index: int) -> str:
     return f"case_{fallback_index:04d}"
 
 
+def _prediction_candidates_for_row(row: dict[str, Any]) -> list[str]:
+    candidates = [str(row["case_id"])]
+    image_path = row.get("image_path")
+    if not _is_missing(image_path):
+        candidates.append(_normalize_filename(Path(str(image_path)).name))
+    patient_id = str(row.get("patient_id", "")).strip()
+    phase = str(row.get("phase", "")).strip().lower()
+    if patient_id and phase:
+        candidates.append(f"{patient_id}_{phase}".replace(" ", "_"))
+    if patient_id:
+        candidates.append(patient_id.replace(" ", "_"))
+
+    normalized: list[str] = []
+    for candidate in candidates:
+        value = _normalize_filename(candidate)
+        if value and value not in normalized:
+            normalized.append(value)
+    return normalized
+
+
+def _index_reusable_predictions(reusable_prediction_dirs: list[str]) -> dict[str, Path]:
+    indexed: dict[str, Path] = {}
+    for directory in reusable_prediction_dirs:
+        root = Path(directory).expanduser().resolve()
+        if not root.is_dir():
+            continue
+        for prediction_path in sorted(root.glob("*.nii.gz")):
+            indexed.setdefault(_normalize_filename(prediction_path.name), prediction_path)
+        for prediction_path in sorted(root.glob("*.nii")):
+            indexed.setdefault(_normalize_filename(prediction_path.name), prediction_path)
+    return indexed
+
+
+def _copy_reusable_predictions(
+    rows: list[dict[str, Any]],
+    predictions_dir: Path,
+    reusable_prediction_dirs: list[str],
+    override_existing_predictions: bool,
+) -> dict[str, Any]:
+    indexed_predictions = _index_reusable_predictions(reusable_prediction_dirs)
+    summary: dict[str, Any] = {
+        "num_cases": len(rows),
+        "num_indexed_reusable_predictions": len(indexed_predictions),
+        "reusable_prediction_dirs": reusable_prediction_dirs,
+        "already_present": [],
+        "reused": [],
+        "missing": [],
+    }
+
+    predictions_dir.mkdir(parents=True, exist_ok=True)
+    for row in rows:
+        case_id = str(row["case_id"])
+        destination = predictions_dir / f"{case_id}.nii.gz"
+        if destination.exists() and not override_existing_predictions:
+            summary["already_present"].append(case_id)
+            continue
+
+        matched_source = None
+        matched_candidate = None
+        for candidate in _prediction_candidates_for_row(row):
+            source = indexed_predictions.get(candidate)
+            if source is not None:
+                matched_source = source
+                matched_candidate = candidate
+                break
+
+        if matched_source is None:
+            summary["missing"].append(case_id)
+            continue
+
+        shutil.copy2(matched_source, destination)
+        summary["reused"].append(
+            {
+                "case_id": case_id,
+                "matched_candidate": matched_candidate,
+                "source": str(matched_source),
+                "destination": str(destination),
+            }
+        )
+
+    summary["num_already_present"] = len(summary["already_present"])
+    summary["num_reused"] = len(summary["reused"])
+    summary["num_missing"] = len(summary["missing"])
+    return summary
+
+
 def _predict_structure_masks_worker(
     rows: list[dict[str, Any]],
     predictions_dir: str,
@@ -936,7 +1022,6 @@ def _predict_structure_masks_worker(
     import SimpleITK as sitk
 
     predictor = None
-    reuse_dirs = [Path(path).expanduser().resolve() for path in reusable_prediction_dirs]
 
     total = len(rows)
     for index, row in enumerate(rows, start=1):
@@ -957,16 +1042,6 @@ def _predict_structure_masks_worker(
             if show_case_progress:
                 print(f"[{worker_label}] Skipping {case_id} ({index}/{total})")
             continue
-
-        if not override_existing_predictions and not prediction_path.exists():
-            for reuse_dir in reuse_dirs:
-                reusable_prediction = reuse_dir / f"{case_id}.nii.gz"
-                if reusable_prediction.exists():
-                    prediction_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(reusable_prediction, prediction_path)
-                    if show_case_progress:
-                        print(f"[{worker_label}] Reused {case_id} ({index}/{total}) from {reuse_dir}")
-                    break
 
         if not prediction_path.exists() and predictor is None:
             import torch
@@ -1098,6 +1173,27 @@ def build_hybrid_structure_manifest_from_model_predictions(
         prepared["case_id"] = case_id
         prepared_rows.append(prepared)
 
+    reuse_summary = _copy_reusable_predictions(
+        rows=prepared_rows,
+        predictions_dir=predictions_dir,
+        reusable_prediction_dirs=reusable_dirs,
+        override_existing_predictions=override_existing_predictions,
+    )
+    reuse_summary_path = output_root / "reusable_prediction_summary.json"
+    reuse_summary_path.write_text(json.dumps(reuse_summary, indent=2), encoding="utf-8")
+    print(
+        "[reuse] "
+        f"indexed={reuse_summary['num_indexed_reusable_predictions']} "
+        f"already_present={reuse_summary['num_already_present']} "
+        f"reused={reuse_summary['num_reused']} "
+        f"missing={reuse_summary['num_missing']} "
+        f"summary={reuse_summary_path}"
+    )
+    if reuse_summary["missing"]:
+        preview = ", ".join(reuse_summary["missing"][:10])
+        suffix = "..." if len(reuse_summary["missing"]) > 10 else ""
+        print(f"[reuse] first missing cases: {preview}{suffix}")
+
     model_dir = str(Path(model_training_output_dir).expanduser().resolve())
     if gpu_ids:
         if device != "cuda":
@@ -1199,6 +1295,10 @@ def build_hybrid_structure_manifest_from_model_predictions(
         "hybrid_manifest_csv": str(Path(output_manifest_csv).expanduser().resolve()),
         "predictions_dir": str(predictions_dir),
         "reusable_prediction_dirs": reusable_dirs,
+        "reusable_prediction_summary_json": str(reuse_summary_path),
+        "num_reused_predictions": reuse_summary["num_reused"],
+        "num_already_present_predictions": reuse_summary["num_already_present"],
+        "num_missing_reusable_predictions": reuse_summary["num_missing"],
         "predicted_structure_mask_dirs": {
             structure: str(path)
             for structure, path in structure_dirs.items()
