@@ -40,9 +40,9 @@ DEFAULT_LABEL_MAP: dict[str, int] = {
 
 DEFAULT_MULTICLASS_STRUCTURE_PRIORITY: list[str] = [
     "pancreas",
+    "tumor",
     "artery",
     "vein",
-    "tumor",
     "cbd",
     "duct",
     "cyst",
@@ -465,22 +465,68 @@ def _build_label_volume(
     mask_paths: dict[str, str],
     label_map: dict[str, int],
     structure_priority: list[str],
-) -> tuple[np.ndarray, dict[str, int]]:
+) -> tuple[np.ndarray, dict[str, int], dict[str, np.ndarray], dict[str, np.ndarray]]:
     import SimpleITK as sitk
 
     label_array = np.zeros(tuple(reversed(reference_image.GetSize())), dtype=np.uint8)
-    voxel_counts: dict[str, int] = {}
+    raw_mask_arrays: dict[str, np.ndarray] = {}
+    cleaned_mask_arrays: dict[str, np.ndarray] = {}
+    voxel_counts: dict[str, int] = {structure: 0 for structure in structure_priority}
 
     for structure in structure_priority:
         mask_path = mask_paths.get(structure)
         if _is_missing(mask_path):
-            voxel_counts[structure] = 0
             continue
         mask_image = _resample_to_reference(_load_image(mask_path), reference_image)
-        mask_array = sitk.GetArrayFromImage(mask_image) > 0
-        label_array[mask_array] = np.uint8(label_map[structure])
-        voxel_counts[structure] = int(mask_array.sum())
-    return label_array, voxel_counts
+        raw_mask_arrays[structure] = sitk.GetArrayFromImage(mask_image) > 0
+
+    higher_priority_union: np.ndarray | None = None
+    for structure in reversed(structure_priority):
+        raw_mask = raw_mask_arrays.get(structure)
+        if raw_mask is None:
+            continue
+        if higher_priority_union is None:
+            higher_priority_union = np.zeros_like(raw_mask, dtype=bool)
+        cleaned_mask = np.logical_and(raw_mask, np.logical_not(higher_priority_union))
+        cleaned_mask_arrays[structure] = cleaned_mask
+        higher_priority_union = np.logical_or(higher_priority_union, raw_mask)
+
+    for structure in structure_priority:
+        cleaned_mask = cleaned_mask_arrays.get(structure)
+        if cleaned_mask is None:
+            continue
+        label_array[cleaned_mask] = np.uint8(label_map[structure])
+        voxel_counts[structure] = int(cleaned_mask.sum())
+    return label_array, voxel_counts, raw_mask_arrays, cleaned_mask_arrays
+
+
+def _select_crop_mask(
+    crop_mode: str,
+    raw_mask_arrays: dict[str, np.ndarray],
+    cleaned_mask_arrays: dict[str, np.ndarray],
+) -> tuple[np.ndarray | None, str]:
+    if crop_mode == "none":
+        return None, "none"
+
+    if crop_mode == "pancreas_roi":
+        candidates = [
+            ("raw_pancreas", raw_mask_arrays.get("pancreas")),
+            ("cleaned_pancreas", cleaned_mask_arrays.get("pancreas")),
+            ("cleaned_tumor", cleaned_mask_arrays.get("tumor")),
+            ("raw_tumor", raw_mask_arrays.get("tumor")),
+        ]
+    elif crop_mode == "tumor_roi":
+        candidates = [
+            ("cleaned_tumor", cleaned_mask_arrays.get("tumor")),
+            ("raw_tumor", raw_mask_arrays.get("tumor")),
+        ]
+    else:
+        raise ValueError(f"Unsupported crop_mode: {crop_mode}")
+
+    for source_name, mask_array in candidates:
+        if mask_array is not None and np.any(mask_array):
+            return mask_array, source_name
+    return None, "missing_crop_structure"
 
 
 def _crop_image_and_label_volume(
@@ -488,19 +534,15 @@ def _crop_image_and_label_volume(
     label_volume: np.ndarray,
     crop_mode: str,
     crop_margin_mm: list[float],
-    crop_structure_label: int | None,
-    crop_fallback_label: int | None,
+    crop_mask: np.ndarray | None,
+    crop_mask_source: str,
 ):
     import SimpleITK as sitk
 
     if crop_mode == "none":
         return reference_image, label_volume, None
 
-    selected_mask = None
-    if crop_structure_label is not None:
-        selected_mask = label_volume == crop_structure_label
-    if (selected_mask is None or not np.any(selected_mask)) and crop_fallback_label is not None:
-        selected_mask = label_volume == crop_fallback_label
+    selected_mask = crop_mask
     if selected_mask is None or not np.any(selected_mask):
         return reference_image, label_volume, {"mode": "none", "reason": "missing_crop_structure"}
 
@@ -521,6 +563,7 @@ def _crop_image_and_label_volume(
     cropped_label_volume = label_volume[z_start:z_stop, y_start:y_stop, x_start:x_stop]
     metadata = {
         "mode": crop_mode,
+        "mask_source": crop_mask_source,
         "bbox_xyz": {
             "x_start": int(x_start),
             "x_stop": int(x_stop),
@@ -581,8 +624,6 @@ def prepare_phase_finetune_dataset_from_ingestion(
     images_dir.mkdir(parents=True, exist_ok=True)
     labels_dir.mkdir(parents=True, exist_ok=True)
     crop_margin_mm = crop_margin_mm or [80.0, 80.0, 30.0]
-    crop_structure_label = dataset_labels.get("pancreas") if crop_mode == "pancreas_roi" else dataset_labels.get("tumor")
-    crop_fallback_label = dataset_labels.get("tumor")
 
     index_rows: list[dict[str, Any]] = []
     for case_index, row in phase_frame.iterrows():
@@ -600,19 +641,24 @@ def prepare_phase_finetune_dataset_from_ingestion(
             continue
 
         reference = _load_image(image_path)
-        label_volume, voxel_counts = _build_label_volume(
+        label_volume, voxel_counts, raw_mask_arrays, cleaned_mask_arrays = _build_label_volume(
             reference_image=reference,
             mask_paths=mask_paths,
             label_map=effective_label_map,
             structure_priority=structure_priority,
+        )
+        crop_mask, crop_mask_source = _select_crop_mask(
+            crop_mode=crop_mode,
+            raw_mask_arrays=raw_mask_arrays,
+            cleaned_mask_arrays=cleaned_mask_arrays,
         )
         cropped_image, cropped_label_volume, crop_metadata = _crop_image_and_label_volume(
             reference_image=reference,
             label_volume=label_volume,
             crop_mode=crop_mode,
             crop_margin_mm=crop_margin_mm,
-            crop_structure_label=crop_structure_label,
-            crop_fallback_label=crop_fallback_label,
+            crop_mask=crop_mask,
+            crop_mask_source=crop_mask_source,
         )
 
         import SimpleITK as sitk

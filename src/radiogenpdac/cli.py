@@ -536,8 +536,8 @@ def prepare_ingested_encoder_dataset_command(
         help="Crop margin in mm as x,y,z around the crop structure.",
     ),
     structure_priority: str = typer.Option(
-        "pancreas,artery,vein,tumor,cbd,duct,cyst",
-        help="Comma-separated overwrite order for multiclass labels. Later structures overwrite earlier ones.",
+        "pancreas,tumor,artery,vein,cbd,duct,cyst",
+        help="Comma-separated structure priority for multiclass labels. Later structures carve out earlier ones.",
     ),
     label_map_json: str | None = typer.Option(
         None,
@@ -819,8 +819,8 @@ def run_phase_finetune_workflow_command(
     num_processes: int = typer.Option(4),
     overwrite_target_spacing: str | None = typer.Option(None),
     structure_priority: str = typer.Option(
-        "pancreas,artery,vein,tumor,cbd,duct,cyst",
-        help="Comma-separated overwrite order for multiclass labels. Later structures overwrite earlier ones.",
+        "pancreas,tumor,artery,vein,cbd,duct,cyst",
+        help="Comma-separated structure priority for multiclass labels. Later structures carve out earlier ones.",
     ),
     label_map_json: str | None = typer.Option(None),
     checkpoint_name: str = typer.Option("checkpoint_final.pth"),
