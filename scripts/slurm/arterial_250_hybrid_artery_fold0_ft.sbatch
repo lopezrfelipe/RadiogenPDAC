@@ -1,13 +1,13 @@
 #!/bin/bash
-# Arterial multiclass fine-tuning on fold 0 using the rebuilt hybrid-artery
+# Arterial multiclass fine-tuning on fold 0 using the rebuilt hybrid-vessels
 # dataset after prep/preprocessing is complete.
 #
 # Submit with:
 #   sbatch scripts/slurm/arterial_250_hybrid_artery_fold0_ft.sbatch
 #
 # Expected pre-existing assets:
-#   - nnUNet raw dataset for Dataset914_PDACArterial250HybridArtery
-#   - nnUNet preprocessed metadata for Dataset914_PDACArterial250HybridArtery
+#   - nnUNet raw dataset for Dataset914_PDACArterial250HybridVessels
+#   - nnUNet preprocessed metadata for Dataset914_PDACArterial250HybridVessels
 #   - splits_final.json
 #   - nnUNetPlansFrom107v3.json
 #   - dataset_fingerprint.json
@@ -20,7 +20,7 @@
 #   NNUNET_PREPROCESSED_DIR=/path/to/nnUNet_preprocessed
 #   NNUNET_RESULTS_DIR=/path/to/nnUNet_results
 #   DATASET_ID=914
-#   DATASET_NAME=PDACArterial250HybridArtery
+#   DATASET_NAME=PDACArterial250HybridVessels
 #   TRAINER_NAME=nnUNetTrainer_ftce
 #   PLANS_IDENTIFIER=nnUNetPlansFrom107v3
 #   CONFIGURATION=3d_fullres
@@ -47,7 +47,7 @@ NNUNET_RAW_DIR="${NNUNET_RAW_DIR:-$(cd "${PROJECT_ROOT}/.." && pwd)/nnUNet_raw}"
 NNUNET_PREPROCESSED_DIR="${NNUNET_PREPROCESSED_DIR:-$(cd "${PROJECT_ROOT}/.." && pwd)/nnUNet_preprocessed}"
 NNUNET_RESULTS_DIR="${NNUNET_RESULTS_DIR:-$(cd "${PROJECT_ROOT}/.." && pwd)/nnUNet_results}"
 DATASET_ID="${DATASET_ID:-914}"
-DATASET_NAME="${DATASET_NAME:-PDACArterial250HybridArtery}"
+DATASET_NAME="${DATASET_NAME:-PDACArterial250HybridVessels}"
 TRAINER_NAME="${TRAINER_NAME:-nnUNetTrainer_ftce}"
 PLANS_IDENTIFIER="${PLANS_IDENTIFIER:-nnUNetPlansFrom107v3}"
 CONFIGURATION="${CONFIGURATION:-3d_fullres}"

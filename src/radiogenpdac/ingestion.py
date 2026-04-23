@@ -906,9 +906,8 @@ def _build_prediction_case_id(row: pd.Series, fallback_index: int) -> str:
 def _predict_structure_masks_worker(
     rows: list[dict[str, Any]],
     predictions_dir: str,
-    structure_dir: str,
-    structure_name: str,
-    prediction_label: int,
+    structure_dirs: dict[str, str],
+    prediction_labels: dict[str, int],
     model_training_output_dir: str,
     checkpoint_name: str,
     fold: int,
@@ -918,6 +917,7 @@ def _predict_structure_masks_worker(
     show_case_progress: bool,
     show_tile_progress: bool,
     worker_label: str,
+    reusable_prediction_dirs: list[str],
     pdac_root: str,
     nnunet_raw_dir: str,
     nnunet_preprocessed_dir: str,
@@ -934,21 +934,9 @@ def _predict_structure_masks_worker(
     )
 
     import SimpleITK as sitk
-    import torch
-    from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 
-    predictor = nnUNetPredictor(
-        device=torch.device(device),
-        perform_everything_on_gpu=device == "cuda",
-        verbose=False,
-        verbose_preprocessing=False,
-        allow_tqdm=show_tile_progress,
-    )
-    predictor.initialize_from_trained_model_folder(
-        model_training_output_dir=model_training_output_dir,
-        use_folds=(fold,),
-        checkpoint_name=checkpoint_name,
-    )
+    predictor = None
+    reuse_dirs = [Path(path).expanduser().resolve() for path in reusable_prediction_dirs]
 
     total = len(rows)
     for index, row in enumerate(rows, start=1):
@@ -956,39 +944,73 @@ def _predict_structure_masks_worker(
         case_id = str(row["case_id"])
         prediction_base = Path(predictions_dir) / case_id
         prediction_path = Path(f"{prediction_base}.nii.gz")
-        mask_path = Path(structure_dir) / f"{case_id}_{structure_name}.nii.gz"
+        mask_paths = {
+            structure: Path(structure_dir) / f"{case_id}_{structure}.nii.gz"
+            for structure, structure_dir in structure_dirs.items()
+        }
 
         if (
             not override_existing_predictions
             and prediction_path.exists()
-            and mask_path.exists()
+            and all(mask_path.exists() for mask_path in mask_paths.values())
         ):
             if show_case_progress:
                 print(f"[{worker_label}] Skipping {case_id} ({index}/{total})")
             continue
 
-        if show_case_progress:
-            print(f"[{worker_label}] Predicting {case_id} ({index}/{total})")
+        if not override_existing_predictions and not prediction_path.exists():
+            for reuse_dir in reuse_dirs:
+                reusable_prediction = reuse_dir / f"{case_id}.nii.gz"
+                if reusable_prediction.exists():
+                    prediction_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(reusable_prediction, prediction_path)
+                    if show_case_progress:
+                        print(f"[{worker_label}] Reused {case_id} ({index}/{total}) from {reuse_dir}")
+                    break
 
-        predictor.predict_from_files(
-            list_of_lists_or_source_folder=[[str(image_path)]],
-            output_folder_or_list_of_truncated_output_files=[str(prediction_base)],
-            save_probabilities=False,
-            overwrite=override_existing_predictions,
-            num_processes_preprocessing=1,
-            num_processes_segmentation_export=1,
-        )
+        if not prediction_path.exists() and predictor is None:
+            import torch
+            from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
+
+            predictor = nnUNetPredictor(
+                device=torch.device(device),
+                perform_everything_on_gpu=device == "cuda",
+                verbose=False,
+                verbose_preprocessing=False,
+                allow_tqdm=show_tile_progress,
+            )
+            predictor.initialize_from_trained_model_folder(
+                model_training_output_dir=model_training_output_dir,
+                use_folds=(fold,),
+                checkpoint_name=checkpoint_name,
+            )
+
+        if show_case_progress:
+            action = "Predicting" if not prediction_path.exists() else "Extracting"
+            print(f"[{worker_label}] {action} {case_id} ({index}/{total})")
+
+        if not prediction_path.exists():
+            if predictor is None:
+                raise RuntimeError("Prediction model was not initialized")
+            predictor.predict_from_files(
+                list_of_lists_or_source_folder=[[str(image_path)]],
+                output_folder_or_list_of_truncated_output_files=[str(prediction_base)],
+                save_probabilities=False,
+                overwrite=override_existing_predictions,
+                num_processes_preprocessing=1,
+                num_processes_segmentation_export=1,
+            )
 
         if not prediction_path.exists():
             raise FileNotFoundError(prediction_path)
 
         prediction_image = sitk.ReadImage(str(prediction_path))
         prediction_array = sitk.GetArrayFromImage(prediction_image)
-        binary_mask = (prediction_array == int(prediction_label)).astype(np.uint8)
-
-        mask_image = sitk.GetImageFromArray(binary_mask)
-        mask_image.CopyInformation(prediction_image)
-        sitk.WriteImage(mask_image, str(mask_path), useCompression=True)
+        for structure_name, prediction_label in prediction_labels.items():
+            binary_mask = (prediction_array == int(prediction_label)).astype(np.uint8)
+            mask_image = sitk.GetImageFromArray(binary_mask)
+            mask_image.CopyInformation(prediction_image)
+            sitk.WriteImage(mask_image, str(mask_paths[structure_name]), useCompression=True)
 
         if show_case_progress:
             print(f"[{worker_label}] Finished {case_id} ({index}/{total})")
@@ -1005,12 +1027,14 @@ def build_hybrid_structure_manifest_from_model_predictions(
     model_training_output_dir: str | Path,
     structure_name: str = "artery",
     prediction_label: int = 3,
+    structure_prediction_labels: dict[str, int] | None = None,
     checkpoint_name: str = "checkpoint_final.pth",
     device: str = "cuda",
     fold: int = 0,
     phase: str | None = None,
     override_existing_predictions: bool = False,
     gpu_ids: list[int] | None = None,
+    reusable_prediction_dirs: list[str | Path] | None = None,
     show_case_progress: bool = True,
     show_tile_progress: bool = False,
 ) -> dict[str, Any]:
@@ -1044,11 +1068,25 @@ def build_hybrid_structure_manifest_from_model_predictions(
     if "image_path" not in manifest_frame.columns:
         raise ValueError(f"{manifest_path} must contain an image_path column")
 
+    prediction_labels = structure_prediction_labels or {structure_name: int(prediction_label)}
+    if not prediction_labels:
+        raise ValueError("At least one structure prediction label is required")
+    prediction_labels = {str(name): int(label) for name, label in prediction_labels.items()}
+
     output_root = Path(output_mask_dir).expanduser().resolve()
     predictions_dir = output_root / "baseline_segmentation_predictions"
-    structure_dir = output_root / f"{structure_name}_from_model"
+    structure_dirs = {
+        structure: output_root / f"{structure}_from_model"
+        for structure in prediction_labels
+    }
     predictions_dir.mkdir(parents=True, exist_ok=True)
-    structure_dir.mkdir(parents=True, exist_ok=True)
+    for structure_dir in structure_dirs.values():
+        structure_dir.mkdir(parents=True, exist_ok=True)
+    reusable_dirs = [
+        str(Path(path).expanduser().resolve())
+        for path in (reusable_prediction_dirs or [])
+        if Path(path).expanduser().resolve().is_dir()
+    ]
 
     prepared_rows: list[dict[str, Any]] = []
     for index, row in manifest_frame.iterrows():
@@ -1075,9 +1113,8 @@ def build_hybrid_structure_manifest_from_model_predictions(
                 args=(
                     chunk,
                     str(predictions_dir),
-                    str(structure_dir),
-                    structure_name,
-                    prediction_label,
+                    {structure: str(path) for structure, path in structure_dirs.items()},
+                    prediction_labels,
                     model_dir,
                     checkpoint_name,
                     fold,
@@ -1087,6 +1124,7 @@ def build_hybrid_structure_manifest_from_model_predictions(
                     show_case_progress,
                     show_tile_progress,
                     f"gpu{gpu_id}",
+                    reusable_dirs,
                     str(Path(pdac_root).expanduser().resolve()),
                     str(Path(nnunet_raw_dir).expanduser().resolve()),
                     str(Path(nnunet_preprocessed_dir).expanduser().resolve()),
@@ -1104,9 +1142,8 @@ def build_hybrid_structure_manifest_from_model_predictions(
         _predict_structure_masks_worker(
             rows=prepared_rows,
             predictions_dir=str(predictions_dir),
-            structure_dir=str(structure_dir),
-            structure_name=structure_name,
-            prediction_label=prediction_label,
+            structure_dirs={structure: str(path) for structure, path in structure_dirs.items()},
+            prediction_labels=prediction_labels,
             model_training_output_dir=model_dir,
             checkpoint_name=checkpoint_name,
             fold=fold,
@@ -1116,6 +1153,7 @@ def build_hybrid_structure_manifest_from_model_predictions(
             show_case_progress=show_case_progress,
             show_tile_progress=show_tile_progress,
             worker_label="worker0",
+            reusable_prediction_dirs=reusable_dirs,
             pdac_root=str(Path(pdac_root).expanduser().resolve()),
             nnunet_raw_dir=str(Path(nnunet_raw_dir).expanduser().resolve()),
             nnunet_preprocessed_dir=str(Path(nnunet_preprocessed_dir).expanduser().resolve()),
@@ -1129,18 +1167,17 @@ def build_hybrid_structure_manifest_from_model_predictions(
         if not prediction_path.exists():
             raise FileNotFoundError(prediction_path)
 
-        mask_path = structure_dir / f"{case_id}_{structure_name}.nii.gz"
-        if not mask_path.exists():
-            raise FileNotFoundError(mask_path)
-
-        override_rows.append(
-            {
-                "image_path": str(row.get("image_path", "")).strip(),
-                "patient_id": str(row.get("patient_id", "")).strip(),
-                "phase": str(row.get("phase", phase or "")).strip().lower(),
-                f"{structure_name}_mask": str(mask_path),
-            }
-        )
+        override_row = {
+            "image_path": str(row.get("image_path", "")).strip(),
+            "patient_id": str(row.get("patient_id", "")).strip(),
+            "phase": str(row.get("phase", phase or "")).strip().lower(),
+        }
+        for structure_name, structure_dir in structure_dirs.items():
+            mask_path = structure_dir / f"{case_id}_{structure_name}.nii.gz"
+            if not mask_path.exists():
+                raise FileNotFoundError(mask_path)
+            override_row[f"{structure_name}_mask"] = str(mask_path)
+        override_rows.append(override_row)
 
     override_manifest_path = output_root / f"{structure_name}_override_manifest.csv"
     override_frame = pd.DataFrame(override_rows)
@@ -1151,22 +1188,29 @@ def build_hybrid_structure_manifest_from_model_predictions(
         override_manifest_path=override_manifest_path,
         output_manifest_path=Path(output_manifest_csv).expanduser().resolve(),
         output_mask_dir=output_root / "hybrid_masks",
-        structures=[structure_name],
+        structures=list(prediction_labels.keys()),
         join_keys=["image_path"],
     )
 
     summary = {
         "num_cases": int(len(hybrid)),
-        "structure_name": structure_name,
-        "prediction_label": int(prediction_label),
+        "structure_prediction_labels": prediction_labels,
         "override_manifest_csv": str(override_manifest_path),
         "hybrid_manifest_csv": str(Path(output_manifest_csv).expanduser().resolve()),
         "predictions_dir": str(predictions_dir),
-        "predicted_structure_mask_dir": str(structure_dir),
-        "hybrid_mask_dir": str((output_root / "hybrid_masks" / structure_name).resolve()),
+        "reusable_prediction_dirs": reusable_dirs,
+        "predicted_structure_mask_dirs": {
+            structure: str(path)
+            for structure, path in structure_dirs.items()
+        },
+        "hybrid_mask_dirs": {
+            structure: str((output_root / "hybrid_masks" / structure).resolve())
+            for structure in prediction_labels
+        },
         "gpu_ids": [] if gpu_ids is None else [int(i) for i in gpu_ids],
     }
-    summary_path = output_root / f"{structure_name}_hybrid_manifest_summary.json"
+    summary_stem = "_".join(prediction_labels.keys())
+    summary_path = output_root / f"{summary_stem}_hybrid_manifest_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     summary["summary_json"] = str(summary_path)
     return summary

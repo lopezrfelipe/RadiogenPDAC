@@ -653,7 +653,18 @@ def build_hybrid_structure_manifest_from_model_command(
     structure_name: str = typer.Option("artery"),
     prediction_label: int = typer.Option(
         3,
-        help="Integer label to extract from the baseline model predictions. For Dataset107 artery this is 3.",
+        help=(
+            "Integer label to extract from the baseline model predictions when using a single "
+            "structure. For Dataset107 vein=2 and artery=3."
+        ),
+    ),
+    structure_labels: list[str] | None = typer.Option(
+        None,
+        "--structure-label",
+        help=(
+            "Optional repeated structure:label pair, for example --structure-label vein:2 "
+            "--structure-label artery:3. Baseline inference runs once and all labels are extracted."
+        ),
     ),
     checkpoint_name: str = typer.Option("checkpoint_final.pth"),
     device: str = typer.Option("cuda"),
@@ -662,6 +673,17 @@ def build_hybrid_structure_manifest_from_model_command(
         None,
         "--gpu-id",
         help="Optional GPU ids for parallel baseline inference. Repeat the flag to shard across multiple GPUs.",
+    ),
+    reusable_prediction_dirs: list[Path] | None = typer.Option(
+        None,
+        "--reuse-prediction-dir",
+        exists=True,
+        file_okay=False,
+        readable=True,
+        help=(
+            "Optional existing baseline prediction directory to reuse before running inference. "
+            "Repeat to search multiple directories."
+        ),
     ),
     phase: str | None = typer.Option(
         None,
@@ -679,6 +701,25 @@ def build_hybrid_structure_manifest_from_model_command(
 ) -> None:
     from radiogenpdac.ingestion import build_hybrid_structure_manifest_from_model_predictions
 
+    structure_prediction_labels: dict[str, int] | None = None
+    if structure_labels:
+        structure_prediction_labels = {}
+        for item in structure_labels:
+            if ":" not in item:
+                raise typer.BadParameter(
+                    f"Expected structure:label for --structure-label, got {item!r}"
+                )
+            structure, label = item.split(":", 1)
+            structure = structure.strip()
+            if not structure:
+                raise typer.BadParameter(f"Missing structure name in --structure-label {item!r}")
+            try:
+                structure_prediction_labels[structure] = int(label)
+            except ValueError as exc:
+                raise typer.BadParameter(
+                    f"Expected integer label in --structure-label {item!r}"
+                ) from exc
+
     summary = build_hybrid_structure_manifest_from_model_predictions(
         phase_manifest_csv=phase_manifest,
         output_manifest_csv=output_manifest,
@@ -690,17 +731,20 @@ def build_hybrid_structure_manifest_from_model_command(
         model_training_output_dir=model_training_output_dir,
         structure_name=structure_name,
         prediction_label=prediction_label,
+        structure_prediction_labels=structure_prediction_labels,
         checkpoint_name=checkpoint_name,
         device=device,
         fold=fold,
         gpu_ids=gpu_ids or None,
+        reusable_prediction_dirs=reusable_prediction_dirs or None,
         phase=phase,
         override_existing_predictions=override_existing_predictions,
         show_case_progress=show_case_progress,
         show_tile_progress=show_tile_progress,
     )
+    structures = ", ".join(summary["structure_prediction_labels"].keys())
     console.print(
-        f"[green]Built hybrid {structure_name} manifest from baseline model predictions.[/green] "
+        f"[green]Built hybrid {structures} manifest from one baseline prediction pass.[/green] "
         f"Manifest={summary['hybrid_manifest_csv']} "
         f"Overrides={summary['override_manifest_csv']}"
     )

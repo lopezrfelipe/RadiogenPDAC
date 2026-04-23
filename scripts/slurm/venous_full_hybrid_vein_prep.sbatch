@@ -14,15 +14,15 @@
 #   NNUNET_RESULTS_DIR=/path/to/nnUNet_results
 #   PANDX_WORKSPACE=/path/to/pandx_workspace
 #   DATA_ROOT=/path/to/data
-#   PHASE_MANIFEST=/path/to/venous_training_manifest.hybrid_vein.csv
+#   PHASE_MANIFEST=/path/to/venous_training_manifest.hybrid_vessels.csv
 #   DATASET_ID=915
-#   DATASET_NAME=PDACVenousFullHybridVein
+#   DATASET_NAME=PDACVenousFullHybridVessels
 #   PLANS_IDENTIFIER=nnUNetPlansFrom107v3
 #   CONFIGURATION=3d_fullres
 #   N_FOLDS=5
 #   SEED=12345
 
-#SBATCH --job-name=pdac-ven-hybrid-vein-prep
+#SBATCH --job-name=pdac-ven-hybrid-vess-prep
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -30,7 +30,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=96G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/venous_full_hybrid_vein_prep_%j.out
+#SBATCH --output=logs/venous_full_hybrid_vessels_prep_%j.out
 
 set -euo pipefail
 
@@ -42,10 +42,10 @@ NNUNET_PREPROCESSED_DIR="${NNUNET_PREPROCESSED_DIR:-${REPO_PARENT}/nnUNet_prepro
 NNUNET_RESULTS_DIR="${NNUNET_RESULTS_DIR:-${REPO_PARENT}/nnUNet_results}"
 PANDX_WORKSPACE="${PANDX_WORKSPACE:-${REPO_PARENT}/pandx_workspace}"
 DATA_ROOT="${DATA_ROOT:-${REPO_PARENT}/data}"
-PHASE_MANIFEST="${PHASE_MANIFEST:-${DATA_ROOT}/manifests/venous_full/venous_training_manifest.hybrid_vein.csv}"
-PREPARED_INDEX="${PREPARED_INDEX:-${DATA_ROOT}/manifests/venous_full/venous_hybrid_vein_prepared_index.csv}"
+PHASE_MANIFEST="${PHASE_MANIFEST:-${DATA_ROOT}/manifests/venous_full/venous_training_manifest.hybrid_vessels.csv}"
+PREPARED_INDEX="${PREPARED_INDEX:-${DATA_ROOT}/manifests/venous_full/venous_hybrid_vessels_prepared_index.csv}"
 DATASET_ID="${DATASET_ID:-915}"
-DATASET_NAME="${DATASET_NAME:-PDACVenousFullHybridVein}"
+DATASET_NAME="${DATASET_NAME:-PDACVenousFullHybridVessels}"
 PLANS_IDENTIFIER="${PLANS_IDENTIFIER:-nnUNetPlansFrom107v3}"
 CONFIGURATION="${CONFIGURATION:-3d_fullres}"
 GPU_MEMORY_TARGET_GB="${GPU_MEMORY_TARGET_GB:-8.0}"

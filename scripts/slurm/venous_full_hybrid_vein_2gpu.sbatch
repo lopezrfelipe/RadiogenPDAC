@@ -1,7 +1,7 @@
 #!/bin/bash
-# Build a hybrid venous vein manifest by unioning manual vein masks with
-# baseline-model vein predictions. Uses 2 GPUs and resumes from any completed
-# filename-based predictions already present in the output directory.
+# Build a hybrid venous vessel manifest by running baseline inference once,
+# extracting multiple vessel labels, and unioning each with the matching manual
+# mask. Uses 2 GPUs and resumes from any completed filename-based predictions.
 #
 # Submit with:
 #   sbatch scripts/slurm/venous_full_hybrid_vein_2gpu.sbatch
@@ -15,14 +15,14 @@
 #   PANDX_WORKSPACE=/path/to/pandx_workspace
 #   DATA_ROOT=/path/to/data
 #   PHASE_MANIFEST=/path/to/venous_training_manifest.csv
-#   OUTPUT_MANIFEST=/path/to/venous_training_manifest.hybrid_vein.csv
-#   OUTPUT_MASK_DIR=/path/to/hybrid_vein_masks
-#   STRUCTURE_NAME=vein
-#   PREDICTION_LABEL=2
+#   OUTPUT_MANIFEST=/path/to/venous_training_manifest.hybrid_vessels.csv
+#   OUTPUT_MASK_DIR=/path/to/hybrid_vessel_masks
+#   STRUCTURE_LABELS=vein:2,artery:3
+#   REUSE_PREDICTION_DIRS=/path/to/existing/predictions,/path/to/other/predictions
 #   CHECKPOINT_NAME=checkpoint_final.pth
 #   FOLD=0
 
-#SBATCH --job-name=pdac-ven-hybrid-vein
+#SBATCH --job-name=pdac-ven-hybrid-vess
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -30,7 +30,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=96G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/venous_full_hybrid_vein_%j.out
+#SBATCH --output=logs/venous_full_hybrid_vessels_%j.out
 
 set -euo pipefail
 
@@ -43,10 +43,10 @@ NNUNET_RESULTS_DIR="${NNUNET_RESULTS_DIR:-${REPO_PARENT}/nnUNet_results}"
 PANDX_WORKSPACE="${PANDX_WORKSPACE:-${REPO_PARENT}/pandx_workspace}"
 DATA_ROOT="${DATA_ROOT:-${REPO_PARENT}/data}"
 PHASE_MANIFEST="${PHASE_MANIFEST:-${DATA_ROOT}/manifests/venous_full/venous_training_manifest.csv}"
-OUTPUT_MANIFEST="${OUTPUT_MANIFEST:-${DATA_ROOT}/manifests/venous_full/venous_training_manifest.hybrid_vein.csv}"
-OUTPUT_MASK_DIR="${OUTPUT_MASK_DIR:-${DATA_ROOT}/manifests/venous_full/hybrid_vein_masks}"
-STRUCTURE_NAME="${STRUCTURE_NAME:-vein}"
-PREDICTION_LABEL="${PREDICTION_LABEL:-2}"
+OUTPUT_MANIFEST="${OUTPUT_MANIFEST:-${DATA_ROOT}/manifests/venous_full/venous_training_manifest.hybrid_vessels.csv}"
+OUTPUT_MASK_DIR="${OUTPUT_MASK_DIR:-${DATA_ROOT}/manifests/venous_full/hybrid_vessel_masks}"
+STRUCTURE_LABELS="${STRUCTURE_LABELS:-vein:2,artery:3}"
+REUSE_PREDICTION_DIRS="${REUSE_PREDICTION_DIRS:-${DATA_ROOT}/manifests/venous_full/fold_${FOLD:-0}_baseline_eval/predictions}"
 CHECKPOINT_NAME="${CHECKPOINT_NAME:-checkpoint_final.pth}"
 FOLD="${FOLD:-0}"
 MODEL_TRAINING_OUTPUT_DIR="${MODEL_TRAINING_OUTPUT_DIR:-${PANDX_WORKSPACE}/nnUNet_results/Dataset107_PDAC_Detection/nnUNetTrainerCELossLesionSplit__nnUNetPlans_v3__3d_fullres}"
@@ -85,9 +85,27 @@ echo "PYTHON_BIN=${PYTHON_BIN}"
 echo "PHASE_MANIFEST=${PHASE_MANIFEST}"
 echo "OUTPUT_MANIFEST=${OUTPUT_MANIFEST}"
 echo "OUTPUT_MASK_DIR=${OUTPUT_MASK_DIR}"
+echo "STRUCTURE_LABELS=${STRUCTURE_LABELS}"
+echo "REUSE_PREDICTION_DIRS=${REUSE_PREDICTION_DIRS}"
 
 "${PYTHON_BIN}" -V
 "${PYTHON_BIN}" -c "import acvl_utils; print('acvl_utils ok:', acvl_utils.__file__)"
+
+STRUCTURE_LABEL_ARGS=()
+IFS=',' read -r -a STRUCTURE_LABEL_ITEMS <<< "${STRUCTURE_LABELS}"
+for item in "${STRUCTURE_LABEL_ITEMS[@]}"; do
+  STRUCTURE_LABEL_ARGS+=(--structure-label "${item}")
+done
+
+REUSE_PREDICTION_ARGS=()
+IFS=',' read -r -a REUSE_PREDICTION_ITEMS <<< "${REUSE_PREDICTION_DIRS}"
+for item in "${REUSE_PREDICTION_ITEMS[@]}"; do
+  if [[ -d "${item}" ]]; then
+    REUSE_PREDICTION_ARGS+=(--reuse-prediction-dir "${item}")
+  else
+    echo "Skipping missing reusable prediction dir: ${item}"
+  fi
+done
 
 "${PYTHON_BIN}" -m radiogenpdac.cli \
   build-hybrid-structure-manifest-from-model \
@@ -99,8 +117,8 @@ echo "OUTPUT_MASK_DIR=${OUTPUT_MASK_DIR}"
   --nnunet-preprocessed-dir "${NNUNET_PREPROCESSED_DIR}" \
   --nnunet-results-dir "${NNUNET_RESULTS_DIR}" \
   --model-training-output-dir "${MODEL_TRAINING_OUTPUT_DIR}" \
-  --structure-name "${STRUCTURE_NAME}" \
-  --prediction-label "${PREDICTION_LABEL}" \
+  "${STRUCTURE_LABEL_ARGS[@]}" \
+  "${REUSE_PREDICTION_ARGS[@]}" \
   --checkpoint-name "${CHECKPOINT_NAME}" \
   --phase venous \
   --fold "${FOLD}" \

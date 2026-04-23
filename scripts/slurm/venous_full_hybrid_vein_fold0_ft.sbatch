@@ -1,13 +1,13 @@
 #!/bin/bash
-# Full venous multiclass fine-tuning on fold 0 using the rebuilt hybrid-vein
+# Full venous multiclass fine-tuning on fold 0 using the rebuilt hybrid-vessels
 # dataset after prep/preprocessing is complete.
 #
 # Submit with:
 #   sbatch scripts/slurm/venous_full_hybrid_vein_fold0_ft.sbatch
 #
 # Expected pre-existing assets:
-#   - nnUNet raw dataset for Dataset915_PDACVenousFullHybridVein
-#   - nnUNet preprocessed metadata for Dataset915_PDACVenousFullHybridVein
+#   - nnUNet raw dataset for Dataset915_PDACVenousFullHybridVessels
+#   - nnUNet preprocessed metadata for Dataset915_PDACVenousFullHybridVessels
 #   - splits_final.json
 #   - nnUNetPlansFrom107v3.json
 #   - dataset_fingerprint.json
@@ -20,7 +20,7 @@
 #   NNUNET_PREPROCESSED_DIR=/path/to/nnUNet_preprocessed
 #   NNUNET_RESULTS_DIR=/path/to/nnUNet_results
 #   DATASET_ID=915
-#   DATASET_NAME=PDACVenousFullHybridVein
+#   DATASET_NAME=PDACVenousFullHybridVessels
 #   TRAINER_NAME=nnUNetTrainer_ftce
 #   PLANS_IDENTIFIER=nnUNetPlansFrom107v3
 #   CONFIGURATION=3d_fullres
@@ -28,7 +28,7 @@
 #   ORIGINAL_MODEL_TRAINING_OUTPUT_DIR=/path/to/original/model_training_output_dir
 #   PRETRAINED_WEIGHTS=/path/to/checkpoint_final.pth
 
-#SBATCH --job-name=pdac-ven-hybrid-vein-ft0
+#SBATCH --job-name=pdac-ven-hybrid-vess-ft0
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -36,7 +36,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=96G
 #SBATCH --time=48:00:00
-#SBATCH --output=logs/venous_full_hybrid_vein_ft0_%j.out
+#SBATCH --output=logs/venous_full_hybrid_vessels_ft0_%j.out
 
 set -euo pipefail
 
@@ -47,7 +47,7 @@ NNUNET_RAW_DIR="${NNUNET_RAW_DIR:-$(cd "${PROJECT_ROOT}/.." && pwd)/nnUNet_raw}"
 NNUNET_PREPROCESSED_DIR="${NNUNET_PREPROCESSED_DIR:-$(cd "${PROJECT_ROOT}/.." && pwd)/nnUNet_preprocessed}"
 NNUNET_RESULTS_DIR="${NNUNET_RESULTS_DIR:-$(cd "${PROJECT_ROOT}/.." && pwd)/nnUNet_results}"
 DATASET_ID="${DATASET_ID:-915}"
-DATASET_NAME="${DATASET_NAME:-PDACVenousFullHybridVein}"
+DATASET_NAME="${DATASET_NAME:-PDACVenousFullHybridVessels}"
 TRAINER_NAME="${TRAINER_NAME:-nnUNetTrainer_ftce}"
 PLANS_IDENTIFIER="${PLANS_IDENTIFIER:-nnUNetPlansFrom107v3}"
 CONFIGURATION="${CONFIGURATION:-3d_fullres}"
